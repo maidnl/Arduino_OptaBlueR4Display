@@ -14,10 +14,10 @@
 #ifndef R4DISPLAYEXPANSION
 #define R4DISPLAYEXPANSION
 
-#include "../Controller.h"
-#include "../Expansion.h"
-#include "CommonOptaUnoR4Display.h"
+#include "Controller.h"
+#include "Expansion.h"
 #include "R4DisplayAddress.h"
+#include "UnoR4DisplayCommon.h"
 #include <stdint.h>
 
 namespace Opta {
@@ -39,5 +39,5 @@ protected:
   bool parse_ans_get_buttons_status();
 };
 
-}
+} // namespace Opta
 #endif

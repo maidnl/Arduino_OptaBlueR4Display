@@ -13,13 +13,16 @@
 
 #ifndef OPTAUNOR4DISPLAY
 #define OPTAUNOR4DISPLAY
-#ifndef ARDUINO_OPTA
-#include "../Module.h"
+
+#ifdef ARDUINO_UNOR4_WIFI
 #include "Arduino.h"
-#include "CommonOptaUnoR4Display.h"
+#include "EEPROM.h"
+#include "OptaBlueModule.h"
+#include "OptaUnoR4DisplayCfg.h"
+#include "UnoR4DisplayCommon.h"
+#include "boot.h"
 
-#define OPTA_UNO_R4_DISPLAY
-
+#include <stdint.h>
 class OptaUnoR4Display : public Module {
 public:
   OptaUnoR4Display();
@@ -27,6 +30,18 @@ public:
   virtual void begin() override;
   virtual void update() override;
   virtual int parse_rx() override;
+
+  uint8_t getMajorFw();
+  uint8_t getMinorFw();
+  uint8_t getReleaseFw();
+  std::string getProduct();
+  void goInBootloaderMode();
+  void readFromFlash(uint16_t add, uint8_t *buffer, uint8_t dim);
+  void writeInFlash(uint16_t add, uint8_t *buffer, uint8_t dim);
+  void initStatusLED();
+  void setStatusLedReadyForAddress();
+  void setStatusLedWaitingForAddress();
+  void setStatusLedHasAddress();
 
 protected:
   BtnEvent_t btn_pressed;

@@ -1,2 +1,6 @@
 # Arduino_OptaBlueR4Display
-Repository used to add support for Uno R4 to Arduino Opta BluePrint
+
+This repository contains a library to use Arduino Uno R4 Wifi with Opta
+BluePrint.
+
+The Uno R4 Wifi is used to provide a tiny display

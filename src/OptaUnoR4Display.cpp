@@ -11,11 +11,72 @@
    NOTES:                                                                     */
 /* -------------------------------------------------------------------------- */
 
-#include "OptaUnoR4Display/CommonOptaUnoR4Display.h"
-#ifndef ARDUINO_OPTA
-
 #include "OptaUnoR4Display.h"
-#ifdef OPTA_UNO_R4_DISPLAY
+
+#ifdef ARDUINO_UNOR4_WIFI
+
+uint8_t OptaUnoR4Display::getMajorFw() { return FW_VERSION_MAJOR; }
+uint8_t OptaUnoR4Display::getMinorFw() { return FW_VERSION_MINOR; }
+uint8_t OptaUnoR4Display::getReleaseFw() { return FW_VERSION_RELEASE; }
+
+std::string OptaUnoR4Display::getProduct() {
+  std::string rv(UNOR4_DISPLAY_DESCRIPTION);
+  return rv;
+}
+
+void OptaUnoR4Display::goInBootloaderMode() { goBootloader(); }
+
+void OptaUnoR4Display::writeInFlash(uint16_t add, uint8_t *buffer,
+                                    uint8_t dim) {
+  if (dim > 32) {
+    dim = 32;
+  }
+  uint8_t data[32];
+  memset((uint8_t *)data, 0, dim);
+  for (int i = 0; i < dim; i++) {
+    data[i] = *(buffer + i);
+  }
+  EEPROM.put(add, data);
+}
+
+void OptaUnoR4Display::readFromFlash(uint16_t add, uint8_t *buffer,
+                                     uint8_t dim) {
+  if (dim > 32) {
+    dim = 32;
+  }
+  uint8_t data[32];
+  memset((uint8_t *)data, 0, dim);
+  EEPROM.get(add, data);
+  for (int i = 0; i < dim; i++) {
+    *(buffer + i) = *(data + i);
+  }
+}
+void OptaUnoR4Display::initStatusLED() {
+  pinMode(OPTA_LED_RED, OUTPUT);
+  pinMode(OPTA_LED_BLUE, OUTPUT);
+  pinMode(OPTA_LED_GREEN, OUTPUT);
+  digitalWrite(OPTA_LED_RED, LED_RGB_OFF);
+  digitalWrite(OPTA_LED_BLUE, LED_RGB_OFF);
+  digitalWrite(OPTA_LED_GREEN, LED_RGB_OFF);
+}
+
+void OptaUnoR4Display::setStatusLedReadyForAddress() {
+  digitalWrite(OPTA_LED_BLUE, LED_RGB_OFF);
+  digitalWrite(OPTA_LED_RED, LED_RGB_ON);
+  digitalWrite(OPTA_LED_GREEN, LED_RGB_OFF);
+}
+
+void OptaUnoR4Display::setStatusLedWaitingForAddress() {
+  digitalWrite(OPTA_LED_BLUE, LED_RGB_ON);
+  digitalWrite(OPTA_LED_RED, LED_RGB_OFF);
+  digitalWrite(OPTA_LED_GREEN, LED_RGB_OFF);
+}
+
+void OptaUnoR4Display::setStatusLedHasAddress() {
+  digitalWrite(OPTA_LED_BLUE, LED_RGB_OFF);
+  digitalWrite(OPTA_LED_RED, LED_RGB_OFF);
+  digitalWrite(OPTA_LED_GREEN, LED_RGB_ON);
+}
 
 #define EVENT_COUNTER_NUM 50
 #define LONG_EVENT_COUNTER_NUM 1000
@@ -28,11 +89,11 @@ BtnEvent_t fire_event(BtnStatus_t st, int counter, bool &fired,
   bool fire = false;
   bool long_fire = false;
   if (counter > EVENT_COUNTER_NUM && !fired) {
-    
+
     fired = true;
     fire = true;
   } else if (counter > LONG_EVENT_COUNTER_NUM && !long_fired) {
-    
+
     long_fired = true;
     long_fire = true;
   }
@@ -50,7 +111,7 @@ BtnEvent_t fire_event(BtnStatus_t st, int counter, bool &fired,
     }
   } else if (long_fire) {
     if (st == BTN_DOWN) {
-      
+
       rv = EVENT_DOWN_LONG;
 
     } else if (st == BTN_UP) {
@@ -78,7 +139,7 @@ BtnEvent_t button_pressed() {
   int a = analogRead(A0);
   if (a > 170 && a < 190) {
     st = BTN_DOWN;
-    
+
     counter_idle = 0;
   } else if (a > 311 && a < 331) {
     st = BTN_RIGHT;
@@ -103,13 +164,14 @@ BtnEvent_t button_pressed() {
   if (btn_st != st) {
     counter = 0;
   } else {
-    counter++; 
+    counter++;
   }
   btn_st = st;
   return fire_event(btn_st, counter, event_fired, long_event_fired);
 }
 
-OptaUnoR4Display::OptaUnoR4Display() : btn_pressed(EVENT_NO_EVENT) {
+OptaUnoR4Display::OptaUnoR4Display()
+    : Module(&Wire1, DETECT_IN, DETECT_OUT), btn_pressed(EVENT_NO_EVENT) {
   //
 }
 
@@ -119,7 +181,6 @@ void OptaUnoR4Display::end() {
 void OptaUnoR4Display::begin() {
   Serial.println("BEGIN OPTA r4 display");
   Module::begin();
-  expansion_type = EXPANSION_UNOR4_DISPLAY;
   pinMode(A0, INPUT);
 }
 
@@ -160,7 +221,7 @@ void OptaUnoR4Display::update() {
 }
 
 int OptaUnoR4Display::msg_ans_get_btn_status() {
-  
+
   tx_buffer[ANS_BUTTON_STATUS_POS] = btn_pressed;
   btn_pressed = EVENT_NO_EVENT;
   return prepareGetAns(tx_buffer, ANS_ARG_R4DISPLAY_GET_BTN,
@@ -193,5 +254,4 @@ int OptaUnoR4Display::parse_rx() {
   return rv;
 }
 
-#endif
 #endif

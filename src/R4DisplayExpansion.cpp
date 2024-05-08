@@ -12,8 +12,7 @@
 /* -------------------------------------------------------------------------- */
 
 #include "R4DisplayExpansion.h"
-#include "OptaUnoR4Display/CommonOptaUnoR4Display.h"
-#include "OptaUnoR4Display/R4DisplayAddress.h"
+#include "R4DisplayAddress.h"
 
 #ifdef ARDUINO_OPTA
 namespace Opta {
@@ -123,5 +122,5 @@ R4DisplayExpansion::i2c_transaction(uint8_t (R4DisplayExpansion::*prepare)(),
   return EXECUTE_ERR_SINTAX;
 }
 
-}
+} // namespace Opta
 #endif
