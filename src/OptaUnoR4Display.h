@@ -21,8 +21,10 @@
 #include "OptaUnoR4DisplayCfg.h"
 #include "UnoR4DisplayCommon.h"
 #include "boot.h"
-
 #include <stdint.h>
+
+typedef enum { BTN_IDLE, BTN_UP, BTN_DOWN, BTN_LEFT, BTN_RIGHT } BtnStatus_t;
+
 class OptaUnoR4Display : public Module {
 public:
   OptaUnoR4Display();
@@ -46,6 +48,10 @@ public:
 protected:
   BtnEvent_t btn_pressed;
   int msg_ans_get_btn_status();
+
+  BtnEvent_t fire_button_event(BtnStatus_t st, int counter, bool &fired,
+                               bool &long_fired);
+  BtnEvent_t button_pressed();
 };
 #endif
 #endif
