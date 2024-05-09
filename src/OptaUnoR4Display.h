@@ -19,7 +19,8 @@
 #include "EEPROM.h"
 #include "OptaBlueModule.h"
 #include "OptaUnoR4DisplayCfg.h"
-#include "UnoR4DisplayCommon.h"
+#include "OptaUnoR4DisplayProtocol.h"
+#include "UnoR4DisplayCommonCfg.h"
 #include "boot.h"
 #include <stdint.h>
 

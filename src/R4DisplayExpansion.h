@@ -14,10 +14,11 @@
 #ifndef R4DISPLAYEXPANSION
 #define R4DISPLAYEXPANSION
 
-#include "Controller.h"
-#include "Expansion.h"
+#include "OptaController.h"
+#include "OptaExpansion.h"
+#include "OptaUnoR4DisplayProtocol.h"
 #include "R4DisplayAddress.h"
-#include "UnoR4DisplayCommon.h"
+#include "UnoR4DisplayCommonCfg.h"
 #include <stdint.h>
 
 namespace Opta {
@@ -30,6 +31,11 @@ public:
   R4DisplayExpansion(Expansion &other);
   unsigned int execute(uint32_t what) override;
   BtnEvent_t getButtonsStatus();
+
+  /* static mandatory function to be implemented by all expansions! */
+  static Expansion *makeExpansion();
+  static std::string getProduct();
+  static void startUp(Controller *ptr);
 
 protected:
   unsigned int i2c_transaction(uint8_t (R4DisplayExpansion::*prepare)(),

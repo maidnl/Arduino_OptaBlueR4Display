@@ -32,16 +32,5 @@ typedef enum {
 
 #define OPERATION_GET_BUTTON_STATUS 255
 
-#define ARG_R4DISPLAY_GET_BTN (uint8_t)0xFA
-#define LEN_R4DISPLAY_GET_BTN (uint8_t)0x00
-#define R4DISPLAY_GET_BTN_LEN                                                  \
-  (uint8_t)(HEADER_DIMENSION + LEN_R4DISPLAY_GET_BTN)
-
-/* ANSWER from expansion: get DI value */
-#define ANS_ARG_R4DISPLAY_GET_BTN (uint8_t) ARG_R4DISPLAY_GET_BTN
-#define ANS_LEN_R4DISPLAY_GET_BTN (uint8_t)0x01
-#define ANS_BUTTON_STATUS_POS (uint8_t)0x03
-#define ANS_R4DISPLAY_GET_BTN_LEN                                              \
-  (uint8_t)(HEADER_DIMENSION + ANS_LEN_R4DISPLAY_GET_BTN)
 
 #endif

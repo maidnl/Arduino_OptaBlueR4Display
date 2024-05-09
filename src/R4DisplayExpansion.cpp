@@ -14,15 +14,56 @@
 #include "R4DisplayExpansion.h"
 #include "R4DisplayAddress.h"
 
+/* clause to compile only for OPTA CONTROLLER */
 #ifdef ARDUINO_OPTA
+
 namespace Opta {
-R4DisplayExpansion::R4DisplayExpansion() {
-  //
+/* Constructor */
+R4DisplayExpansion::R4DisplayExpansion() {}
+/* Destructor */
+R4DisplayExpansion::~R4DisplayExpansion() {}
+
+/* ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ */
+
+/* WRITE mandatory functions */
+
+/* makeExpansion MANDATORY! (and always used)*/
+Expansion *R4DisplayExpansion::makeExpansion() {
+  return new R4DisplayExpansion();
 }
 
-R4DisplayExpansion::~R4DisplayExpansion() {
-  //
+/* getProduct MANDATORY! (and always used) */
+std::string R4DisplayExpansion::getProduct() {
+  std::string rv(UNOR4_DISPLAY_DESCRIPTION);
+  return rv;
 }
+
+/* startUp MANDATORY (but not used in this example)*/
+void R4DisplayExpansion::startUp(Controller *ptr) { (void)ptr; }
+
+/* copy constructor MANDATORY! */
+R4DisplayExpansion::R4DisplayExpansion(Expansion &other) {
+  R4DisplayExpansion &de = (R4DisplayExpansion &)other;
+
+  type = EXPANSION_NOT_VALID;
+  i2c_address = 0;
+  ctrl = other.getCtrl();
+  index = 255;
+
+  if (ctrl != nullptr) {
+    if (other.getType() ==
+        ctrl->getExpansionType(R4DisplayExpansion::getProduct())) {
+      iregs = de.iregs;
+      fregs = de.fregs;
+      type = other.getType();
+      i2c_address = other.getI2CAddress();
+      ctrl = other.getCtrl();
+      index = other.getIndex();
+    }
+  }
+}
+/* ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ */
 
 uint8_t R4DisplayExpansion::msg_get_buttons_status() {
   if (ctrl != nullptr) {
@@ -34,6 +75,14 @@ uint8_t R4DisplayExpansion::msg_get_buttons_status() {
 
 bool R4DisplayExpansion::parse_ans_get_buttons_status() {
   if (ctrl != nullptr) {
+    /*
+    for (int i = 0; i < ANS_R4DISPLAY_GET_BTN_LEN; i++) {
+      Serial.print(ctrl->getRxBuffer()[i], HEX);
+      Serial.print(" ");
+    }
+
+    Serial.println();
+    */
     if (checkAnsGetReceived(ctrl->getRxBuffer(), ANS_ARG_R4DISPLAY_GET_BTN,
                             ANS_LEN_R4DISPLAY_GET_BTN,
                             ANS_R4DISPLAY_GET_BTN_LEN)) {
@@ -47,6 +96,7 @@ bool R4DisplayExpansion::parse_ans_get_buttons_status() {
 }
 
 BtnEvent_t R4DisplayExpansion::getButtonsStatus() {
+  // Serial.println("Get button status");
   execute(OPERATION_GET_BUTTON_STATUS);
   return (BtnEvent_t)iregs[ADD_BUTTONS_STATUS];
 }
@@ -60,10 +110,11 @@ unsigned int R4DisplayExpansion::execute(uint32_t what) {
       rv = i2c_transaction(&R4DisplayExpansion::msg_get_buttons_status,
                            &R4DisplayExpansion::parse_ans_get_buttons_status,
                            ANS_R4DISPLAY_GET_BTN_LEN + 1);
+      // Serial.println("GET button rv = " + String(rv));
       break;
     /* ------------------------------------------------------------------- */
     default:
-      rv = EXECUTE_ERR_UNSUPPORTED;
+      rv = Expansion::execute(what);
       break;
     }
     ctrl->updateRegs(*this);
@@ -71,30 +122,6 @@ unsigned int R4DisplayExpansion::execute(uint32_t what) {
     rv = EXECUTE_ERR_NO_CONTROLLER;
   }
   return rv;
-}
-
-R4DisplayExpansion::R4DisplayExpansion(Expansion &other) {
-  //
-  R4DisplayExpansion &de = (R4DisplayExpansion &)other;
-  if (other.getType() == EXPANSION_UNOR4_DISPLAY) {
-    iregs = de.iregs;
-    fregs = de.fregs;
-    type = other.getType();
-    i2c_address = other.getI2CAddress();
-    ctrl = other.getCtrl();
-    index = other.getIndex();
-    if (ctrl != nullptr) {
-      // ctrl->setExpStartUpCb(DigitalExpansion::startUp);
-    }
-  } else {
-    type = EXPANSION_NOT_VALID;
-    i2c_address = 0;
-    ctrl = other.getCtrl();
-    if (ctrl != nullptr) {
-      // ctrl->setExpStartUpCb(DigitalExpansion::startUp);
-    }
-    index = 255;
-  }
 }
 
 unsigned int

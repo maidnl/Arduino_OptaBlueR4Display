@@ -67,6 +67,7 @@ void OptaUnoR4Display::update() {
   Module::update();
   BtnEvent_t ev = button_pressed();
   if (btn_pressed == EVENT_NO_EVENT) {
+    
     btn_pressed = ev;
   }
 
@@ -102,8 +103,8 @@ void OptaUnoR4Display::update() {
 
 int OptaUnoR4Display::parse_rx() {
   /*
-  for(int i = 0; i < 10; i++) {
-    Serial.print(rx_buffer[i],HEX);
+  for (int i = 0; i < 20; i++) {
+    Serial.print(rx_buffer[i], HEX);
     Serial.print(" ");
   }
   Serial.println();
@@ -266,6 +267,7 @@ BtnEvent_t OptaUnoR4Display::button_pressed() {
   int a = analogRead(A0);
   if (a > 170 && a < 190) {
     st = BTN_DOWN;
+
     counter_idle = 0;
   } else if (a > 311 && a < 331) {
     st = BTN_RIGHT;
@@ -278,6 +280,7 @@ BtnEvent_t OptaUnoR4Display::button_pressed() {
     counter_idle = 0;
   } else {
     st = BTN_IDLE;
+
     counter_idle++;
     counter = 0;
   }
