@@ -21,6 +21,11 @@
 #include "UnoR4DisplayCommonCfg.h"
 #include <stdint.h>
 
+#define EXECUTE_GET_SELECTED_EXPANSION     255
+#define EXECUTE_SET_NUM_OF_EXPANSION       254
+#define EXECUTE_SET_EXPANSION_FEATURES     253
+#define EXECUTE_SET_CHANNEL_CONFIGURATION  252
+
 namespace Opta {
 
 class R4DisplayExpansion : public Expansion {
@@ -30,7 +35,22 @@ public:
   ~R4DisplayExpansion();
   R4DisplayExpansion(Expansion &other);
   unsigned int execute(uint32_t what) override;
-  BtnEvent_t getButtonsStatus();
+  /* get from r4 display what expansion the user has selected */
+  uint8_t getSelectedExpansion();
+  /* tells the R4 display how many expansion are available */
+  void setNumOfExpansions(uint8_t n);
+  /* tells the R4 display the basic features of the selected expansion */
+  void setExpansionFeatures(uint8_t type, uint8_t index, uint8_t n_channels);
+  /* tells the R4 display how is the status of a single channel 
+     each channel can have 2 values (for example digital input that is also
+     adc */
+  void setChannelConfiguration(uint8_t ch, 
+                               chType_t  type, 
+                               float v1, 
+                               chUnit_t u1,
+                               float v2, 
+                               chUnit_t u2);
+
 
   /* static mandatory function to be implemented by all expansions! */
   static Expansion *makeExpansion();
@@ -41,8 +61,12 @@ protected:
   unsigned int i2c_transaction(uint8_t (R4DisplayExpansion::*prepare)(),
                                bool (R4DisplayExpansion::*parse)(),
                                int rx_bytes);
-  uint8_t msg_get_buttons_status();
-  bool parse_ans_get_buttons_status();
+  uint8_t msg_get_selected_expansion();
+  bool parse_ans_get_selected_expansion();
+  bool parse_ack();
+  uint8_t msg_set_num_of_expansions();
+  uint8_t msg_set_expansion_features();
+  uint8_t msg_set_channel_configuration();
 };
 
 } // namespace Opta

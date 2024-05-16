@@ -25,7 +25,11 @@
  * - DETECT OUT pin */
 
 OptaUnoR4Display::OptaUnoR4Display()
-    : Module(&Wire1, DETECT_IN, DETECT_OUT), btn_pressed(EVENT_NO_EVENT) {
+    : Module(&Wire1, DETECT_IN, DETECT_OUT), 
+    btn_pressed(EVENT_NO_EVENT),
+    display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET), 
+    exp_selected(EXPANSION_NOT_SELECTED),
+    num_of_expansions(EXPANSION_NOT_SELECTED) {
   //
 }
 
@@ -57,6 +61,21 @@ void OptaUnoR4Display::begin() {
   pinMode(UNOR4DISPLAY_LED_GREEN, OUTPUT);
   /* RGB red BLUE */
   pinMode(UNOR4DISPLAY_LED_BLUE, OUTPUT);
+
+
+  if(!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
+    Serial.println(F("SSD1306 allocation failed... looping forever"));
+    for(;;); // Don't proceed, loop forever
+  }
+
+  delay(2000); // Pause for 2 seconds        
+  display.clearDisplay();
+
+  draw_select_expansion_menu(0);
+  delay(2000);
+  draw_expansion_menu(0);
+  
+  
 }
 
 /* .......................................................................... */
@@ -99,8 +118,7 @@ void OptaUnoR4Display::update() {
   }
 }
 
-/* .......................................................................... */
-
+/* ________________________________________________________________PARSE_RX() */
 int OptaUnoR4Display::parse_rx() {
   /*
   for (int i = 0; i < 20; i++) {
@@ -120,10 +138,21 @@ int OptaUnoR4Display::parse_rx() {
 
   rv = -1;
 
-  if (checkGetMsgReceived(rx_buffer, ARG_R4DISPLAY_GET_BTN,
-                          LEN_R4DISPLAY_GET_BTN, R4DISPLAY_GET_BTN_LEN)) {
-    return msg_ans_get_btn_status();
-  }
+  /* PARSE SPECIFIC expansion messages */
+
+  if (parse_get_selected_expansion()) {
+    Serial.println("RX: get selected expansion");
+    return msg_ans_selected_expansion();
+  } else if(parse_set_expansion_features()) {
+    Serial.println("RX: set Expansion features");
+    return msg_ack();;
+  } else if(parse_set_ch_configuration()) {
+    Serial.println("RX: set Channel configuration");
+    return msg_ack();;
+  } else if(parse_set_num_of_expansion()) {
+    Serial.println("RX: set num of expansion");
+    return msg_ack();;
+  } 
 
   return rv;
 }
@@ -299,12 +328,187 @@ BtnEvent_t OptaUnoR4Display::button_pressed() {
   return fire_button_event(btn_st, counter, event_fired, long_event_fired);
 }
 
-int OptaUnoR4Display::msg_ans_get_btn_status() {
+void OptaUnoR4Display::testscrolltext(void) {
+  display.clearDisplay();
 
-  tx_buffer[ANS_BUTTON_STATUS_POS] = btn_pressed;
-  btn_pressed = EVENT_NO_EVENT;
-  return prepareGetAns(tx_buffer, ANS_ARG_R4DISPLAY_GET_BTN,
-                       ANS_LEN_R4DISPLAY_GET_BTN, ANS_R4DISPLAY_GET_BTN_LEN);
+  display.setTextSize(2); // Draw 2X-scale text
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(10, 0);
+  display.println(F("scroll"));
+  display.println("SDFASDF");
+  display.display();      // Show initial text
+  delay(100);
+
+  // Scroll in various directions, pausing in-between:
+  display.startscrollright(0x00, 0x01);
+  //delay(2000);
+  //display.stopscroll();
+  //delay(1000);
+  //display.startscrollleft(0x00, 0x0F);
+  //delay(2000);
+  //display.stopscroll();
+  //delay(1000);
+  //display.startscrolldiagright(0x00, 0x07);
+  //delay(2000);
+  //display.startscrolldiagleft(0x00, 0x07);
+  //delay(2000);
+  //display.stopscroll();
+  delay(1000);
+}
+
+
+void OptaUnoR4Display::draw_select_expansion_menu(uint8_t n){
+  display.clearDisplay();
+
+  /* Expansion */
+  display.setTextSize(2);             // Normal 1:1 pixel scale
+  display.setTextColor(SSD1306_WHITE);        // Draw white text
+  display.setCursor(0,0);             // Start at top-left corner
+  display.println(F(" Expansion"));
+  
+  /* to  left arrow */
+  display.fillTriangle(
+      28 , 25,
+      28,  56,
+      2, 25+14, SSD1306_INVERSE);
+  
+  /* number of expansion */
+  display.setTextSize(5);
+  display.setCursor(53,24);
+  display.print(n);
+  
+  /* to right arrow */
+  display.fillTriangle(
+      display.width() - 28 , 25,
+      display.width() - 28,  56,
+      display.width() - 2, 25+14, SSD1306_INVERSE);
+  
+  display.display();
+}
+
+void OptaUnoR4Display::draw_expansion_menu(uint8_t n) {
+  display.clearDisplay();
+
+  /* Expansion */
+  display.setTextSize(2);             // Normal 1:1 pixel scale
+  display.setTextColor(SSD1306_WHITE);        // Draw white text
+  display.setCursor(0,0);             // Start at top-left corner
+  
+  display.print(" Analog ");
+                //Digital
+  display.println(n);
+  
+
+  display.setTextSize(1);  
+  display.setCursor(0,16);
+  for(int i = 0; i < 8; i++) {
+    display.print("  ");
+    display.print(i);
+    display.print(") ");
+    display.print("ADC");
+    display.print(" ");
+    display.println("value");
+
+  } 
+  display.display();
+
+  display.startscrollleft(0x00, 0x01);
+}
+
+
+/* _____________________________________________PARSE: get selected expansion */
+bool OptaUnoR4Display::parse_get_selected_expansion() {
+  return checkGetMsgReceived(rx_buffer, 
+                             Req_GET_EXP,
+                             Len_GET_EXP, 
+                             GET_EXP_Len);
+}
+
+/* _______________________________________PREPARE ANS: get selected expansion */
+uint8_t OptaUnoR4Display::msg_ans_selected_expansion() {
+  tx_buffer[Ans_GET_EXP_ExpPos] = exp_selected;
+  return prepareGetAns(tx_buffer, 
+                       Ans_GET_EXP,
+                       AnsLen_GET_EXP, 
+                       Ans_GET_EXP_Len);
+
+}
+
+/* _______________________________________________________________PREPARE ACK */
+uint8_t OptaUnoR4Display::msg_ack() {
+  return prepareSetAns(tx_buffer, 
+                       ACK_ARG,
+                       Len_ACK, 
+                       ACK_Len);
+
+}
+  
+/* _____________________________________________PARSE: Set Expansion Features */
+bool OptaUnoR4Display::parse_set_expansion_features() {
+  if(checkSetMsgReceived(rx_buffer, 
+                         Cmd_EXP_FEATURES,
+                         Len_EXP_FEATURES, 
+                         EXP_FEATURES_Len)) {
+
+    exp_selected = rx_buffer[EXP_FEATURES_IndexPos];
+    exp_type = rx_buffer[EXP_FEATURES_TypePos];
+    exp_num_of_channels = rx_buffer[EXP_FEATURES_ChNumPos];
+
+    for(int i = 0; i < MAX_CHANNEL_DISPLAYABLE; i++) {
+      ch_cfg[i].type = CH_TYPE_NO_TYPE;
+    }
+
+    return true;
+  }
+
+  return false;
+}
+
+/* _____________________________________________PARSE: Set Expansion Features */
+bool OptaUnoR4Display::parse_set_num_of_expansion() {
+  if(checkSetMsgReceived(rx_buffer, 
+                         Cmd_EXP_NUM,
+                         Len_EXP_NUM, 
+                         EXP_NUM_Len)) {
+
+    num_of_expansions = rx_buffer[EXP_NUM_NumPos];
+    return true;
+  }
+
+  return false;
+}
+
+/* __________________________________________PARSE: Set Channel configuration */
+bool OptaUnoR4Display::parse_set_ch_configuration() {
+  if(checkSetMsgReceived(rx_buffer, 
+                       Cmd_CH_CFG,
+                       Len_CH_CFG, 
+                       CH_CFG_Len)) {
+    
+    Float_u v;
+    uint8_t ch = rx_buffer[CH_CFG_ChPos];
+    if(ch < MAX_CHANNEL_DISPLAYABLE) {
+      ch_cfg[ch].type = rx_buffer[CH_CFG_TypePos];
+      
+      v.bytes[0] = rx_buffer[CH_CFG_V1Pos_0];
+      v.bytes[1] = rx_buffer[CH_CFG_V1Pos_1];
+      v.bytes[2] = rx_buffer[CH_CFG_V1Pos_2];
+      v.bytes[3] = rx_buffer[CH_CFG_V1Pos_3];
+      ch_cfg[ch].values[0] = v.value;
+
+      v.bytes[0] = rx_buffer[CH_CFG_V2Pos_0];
+      v.bytes[1] = rx_buffer[CH_CFG_V2Pos_1];
+      v.bytes[2] = rx_buffer[CH_CFG_V2Pos_2];
+      v.bytes[3] = rx_buffer[CH_CFG_V2Pos_3];
+      ch_cfg[ch].values[1] = v.value;
+
+      ch_cfg[ch].units[0] = rx_buffer[CH_CFG_U1Pos];
+      ch_cfg[ch].units[1] = rx_buffer[CH_CFG_U4Pos];
+    }
+    return true;
+  }
+
+  return false;
 }
 
 #endif

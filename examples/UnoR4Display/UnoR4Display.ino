@@ -43,10 +43,10 @@ void printExpansionType(ExpansionType_t t) {
 void printExpansionInfo() {
 
 static unsigned long long start = millis() + 11000;
-if(millis() - start  > 10000) {
+if(millis() - start  > 5000) {
 
   start = millis();
-  Serial.print("Number of expansions: ");
+  Serial.print("\nNumber of expansions: ");
   Serial.println(OptaController.getExpansionNum());
 
   for(int i = 0; i < OptaController.getExpansionNum(); i++) {
@@ -79,11 +79,13 @@ if(millis() - start  > 10000) {
 void setup() {
 /* -------------------------------------------------------------------------- */    
   Serial.begin(115200);
-  delay(1000);
+  delay(3000);
 
   OptaController.begin();
   OptaController.registerCustomExpansion(R4DisplayExpansion::getProduct(),
-  R4DisplayExpansion::makeExpansion,R4DisplayExpansion::startUp);
+                                         R4DisplayExpansion::makeExpansion,
+                                         R4DisplayExpansion::startUp);
+  printExpansionInfo();
 }
 
 /* -------------------------------------------------------------------------- */
@@ -92,39 +94,17 @@ void setup() {
 void loop() {
 /* -------------------------------------------------------------------------- */    
   OptaController.update();
-  //printExpansionInfo();
+  printExpansionInfo();
 
-  R4DisplayExpansion r4 = OptaController.getExpansion(3);
+  for(int i = 0; i < OPTA_CONTROLLER_MAX_EXPANSION_NUM; i++) {
+  R4DisplayExpansion r4 = OptaController.getExpansion(i);
   if(r4) {
-  
-	   BtnEvent_t ev = r4.getButtonsStatus(); 
-		if (ev != EVENT_NO_EVENT) {
-		 Serial.print("EVENT ");
-		 if (ev == EVENT_UP) {
-			Serial.println("UP");
-
-		 } else if (ev == EVENT_DOWN) {
-			Serial.println("DOWN");
-
-		 } else if (ev == EVENT_RIGHT) {
-			Serial.println("RIGHT");
-
-		 } else if (ev == EVENT_LEFT) {
-			Serial.println("LEFT");
-		 } else if (ev == EVENT_UP_LONG) {
-			Serial.println("UP LONG");
-
-		 } else if (ev == EVENT_DOWN_LONG) {
-			Serial.println("DOWN_LONG");
-
-		 } else if (ev == EVENT_RIGHT_LONG) {
-			Serial.println("RIGHT_LONG");
-
-		 } else if (ev == EVENT_LEFT_LONG) {
-			Serial.println("LEFT_LONG");
-		 }
+     
+	   uint8_t selected_expansion = r4.getSelectedExpansion(); 
+		
 		}
   }
+  
   
 }
 

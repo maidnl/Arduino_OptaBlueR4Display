@@ -21,8 +21,25 @@
 #include "OptaUnoR4DisplayCfg.h"
 #include "OptaUnoR4DisplayProtocol.h"
 #include "UnoR4DisplayCommonCfg.h"
+#include "OptaBluePrintCfg.h"
 #include "boot.h"
 #include <stdint.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+#include <vector>
+
+using namespace std;
+
+#define SCREEN_WIDTH 128 // OLED display width, in pixels
+#define SCREEN_HEIGHT 64 // OLED display height, in pixels
+
+// Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)
+// The pins for I2C are defined by the Wire-library. 
+// On an arduino UNO:       A4(SDA), A5(SCL)
+// On an arduino MEGA 2560: 20(SDA), 21(SCL)
+// On an arduino LEONARDO:   2(SDA),  3(SCL), ...
+#define OLED_RESET     -1 // Reset pin # (or -1 if sharing Arduino reset pin)
+#define SCREEN_ADDRESS 0x3C ///< See datasheet for Address; 0x3D for 128x64, 0x3C for 128x32
 
 typedef enum { BTN_IDLE, BTN_UP, BTN_DOWN, BTN_LEFT, BTN_RIGHT } BtnStatus_t;
 
@@ -48,7 +65,28 @@ public:
 
 protected:
   BtnEvent_t btn_pressed;
-  int msg_ans_get_btn_status();
+  Adafruit_SSD1306 display;
+
+  uint8_t exp_selected;
+  uint8_t num_of_expansions;
+  uint8_t exp_type;
+  uint8_t exp_num_of_channels;
+
+  ChCfg ch_cfg[MAX_CHANNEL_DISPLAYABLE];
+
+  bool parse_get_selected_expansion();
+  uint8_t msg_ans_selected_expansion();
+
+  uint8_t msg_ack();
+  bool parse_set_expansion_features();
+  bool parse_set_ch_configuration();
+  bool parse_set_num_of_expansion();
+
+  void draw_select_expansion_menu(uint8_t n);
+  void draw_expansion_menu(uint8_t n);
+  void testscrolltext();
+
+
 
   BtnEvent_t fire_button_event(BtnStatus_t st, int counter, bool &fired,
                                bool &long_fired);
