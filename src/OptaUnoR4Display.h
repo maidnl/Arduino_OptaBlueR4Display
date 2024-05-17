@@ -46,6 +46,7 @@ typedef enum { BTN_IDLE, BTN_UP, BTN_DOWN, BTN_LEFT, BTN_RIGHT } BtnStatus_t;
 class OptaUnoR4Display : public Module {
 public:
   OptaUnoR4Display();
+  ~OptaUnoR4Display();
   virtual void end() override;
   virtual void begin() override;
   virtual void update() override;
@@ -67,12 +68,16 @@ protected:
   BtnEvent_t btn_pressed;
   Adafruit_SSD1306 display;
 
-  uint8_t exp_selected;
-  uint8_t num_of_expansions;
-  uint8_t exp_type;
-  uint8_t exp_num_of_channels;
+  volatile uint8_t exp_selected;
+  volatile uint8_t exp_selected_from_controller;
+  volatile uint8_t num_of_expansions;
+  volatile uint8_t exp_type;
+  volatile uint8_t exp_num_of_channels = 0;
+  volatile bool use_expansion_features = false;
+  volatile bool update_expansion_features = false;
+  volatile bool reset_state_machine;
 
-  ChCfg ch_cfg[MAX_CHANNEL_DISPLAYABLE];
+  volatile ChCfg ch_cfg[MAX_CHANNEL_DISPLAYABLE];
 
   bool parse_get_selected_expansion();
   uint8_t msg_ans_selected_expansion();
@@ -82,9 +87,21 @@ protected:
   bool parse_set_ch_configuration();
   bool parse_set_num_of_expansion();
 
+  void draw_wait_for_expansion_features();
+  void draw_wait_for_expansion_page();
+  void draw_welcome_page();
   void draw_select_expansion_menu(uint8_t n);
-  void draw_expansion_menu(uint8_t n);
+  void draw_expansion_page();
   void testscrolltext();
+
+  void main_state_machine();
+
+  volatile uint8_t debug_msg = 0;
+  void debugReceivedMsg();
+
+  int8_t selected_row = 0;
+  uint8_t initial_row = 0;
+  uint8_t final_row = MAX_ROW_DISPLAYED_PER_PAGE;
 
 
 

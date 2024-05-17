@@ -94,19 +94,66 @@ void setup() {
 void loop() {
 /* -------------------------------------------------------------------------- */    
   OptaController.update();
-  printExpansionInfo();
+  //printExpansionInfo();
+
+  static int ch = 0;
+
+
+
 
   for(int i = 0; i < OPTA_CONTROLLER_MAX_EXPANSION_NUM; i++) {
-  R4DisplayExpansion r4 = OptaController.getExpansion(i);
-  if(r4) {
+    R4DisplayExpansion r4 = OptaController.getExpansion(i);
+    if(r4) {
+       
+       r4.setNumOfExpansions(OptaController.getExpansionNum());
+  	   uint8_t selected_expansion = r4.getSelectedExpansion(); 
+       Serial.println("Selected expansion: " +  String(selected_expansion));
+       ExpansionType_t t = OptaController.getExpansionType(selected_expansion);
+
+       Serial.println("type = " + String(t));
+
+       if(t == EXPANSION_OPTA_DIGITAL_MEC || 
+          t == EXPANSION_OPTA_DIGITAL_STS ||
+          t == EXPANSION_DIGITAL_INVALID) {
+        Serial.println("DIGITAL");
+        r4.setExpansionFeatures(t, selected_expansion, 8+16);
+
+        DigitalExpansion de = OptaController.getExpansion(selected_expansion);
+        if(de) {
+        for(int k = 0; k < DIGITAL_OUT_NUM; k++) {
+            Serial.println("---- set channel " + String(k) );
+            r4.setChannelConfiguration(k, CH_TYPE_DIGITAL_OUT,
+                               (float)de.digitalOutRead(k), 
+                               CH_UNIT_DIGIT,
+                               0.0, 
+                               CH_UNIT_NO_UNIT);
+            
+
+        }
+        for(int k = 0; k < DIGITAL_IN_NUM; k++) {
+          Serial.println("---- set channel " + String(k + DIGITAL_OUT_NUM) );
+          Serial.println(String(k) + " " + String(de.pinVoltage(k,true)));
+            r4.setChannelConfiguration(DIGITAL_OUT_NUM + k, CH_TYPE_DIGITAL_IN_WITH_V_ADC,
+                               (float)de.digitalRead(k,true), 
+                               CH_UNIT_DIGIT,
+                               (float)de.pinVoltage(k,true), 
+                               CH_UNIT_VOLT);
+        }
+        }
+      
+       } else if(t == EXPANSION_OPTA_ANALOG) {
+        Serial.println("ANALOG");
+        r4.setExpansionFeatures(t, selected_expansion, 8+4);
+       
+       } else if(t == OptaController.getExpansionType(R4DisplayExpansion::getProduct())) {
+        Serial.println("r4");
+        r4.setExpansionFeatures(UNO_R4_DISPLAY_ADDITIONAL_TYPE, selected_expansion, 0);
      
-	   uint8_t selected_expansion = r4.getSelectedExpansion(); 
-		
-		}
-  }
-  
-  
+       }
+    }
+  }  
 }
+
 
 
 

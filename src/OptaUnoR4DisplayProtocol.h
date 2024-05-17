@@ -38,7 +38,7 @@
 
 
 /* ______________________________________COMMAND: SELECTED EXPANSION FEATURES */
-#define Cmd_EXP_FEATURES         0x01
+#define Cmd_EXP_FEATURES         0x04
 #define Len_EXP_FEATURES         0x03
 #define EXP_FEATURES_TypePos     (BP_HEADER_DIM + 0)
 #define EXP_FEATURES_IndexPos    (BP_HEADER_DIM + 1)
@@ -61,7 +61,7 @@
 #define CH_CFG_V2Pos_1           (BP_HEADER_DIM + 8) 
 #define CH_CFG_V2Pos_2           (BP_HEADER_DIM + 9) 
 #define CH_CFG_V2Pos_3           (BP_HEADER_DIM + 10) 
-#define CH_CFG_U4Pos             (BP_HEADER_DIM + 11) 
+#define CH_CFG_U2Pos             (BP_HEADER_DIM + 11) 
 #define CH_CFG_Len               (BP_HEADER_DIM + Len_CH_CFG)
 
 #define CH_CFG_AnsLen            ACK_Len

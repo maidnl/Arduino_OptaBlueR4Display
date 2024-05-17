@@ -42,17 +42,21 @@ typedef enum {
 #define CH_TYPE_DIGITAL_IN                 2
 #define CH_TYPE_DIGITAL_IN_WITH_V_ADC      3
 #define CH_TYPE_DIGITAL_IN_WITH_C_ADC      4
-#define CH_TYPE_V_ADC                      5
-#define CH_TYPE_C_ADC                      6
-#define CH_TYPE_V_ADC_WITH_C_ADC           7
-#define CH_TYPE_C_ADC_WITH_V_ADC           8
-#define CH_TYPE_PWM                        9
-#define CH_TYPE_RTD_2_WIRES                10
-#define CH_TYPE_RTD_3_WIRES                11
-#define CH_TYPE_V_DAC                      12
-#define CH_TYPE_C_DAC                      13
-#define CH_TYPE_V_DAC_WITH_C_ADC           14
-#define CH_TYPE_C_DAC_WITH_V_ADC           16
+#define CH_TYPE_DIGITAL_OUT                5
+#define CH_TYPE_DIGITAL_OUT_WITH_V_ADC     6
+#define CH_TYPE_DIGITAL_OUT_WITH_C_ADC     7
+#define CH_TYPE_V_ADC                      8
+#define CH_TYPE_C_ADC                      9
+#define CH_TYPE_V_ADC_WITH_C_ADC           10
+#define CH_TYPE_C_ADC_WITH_V_ADC           11
+#define CH_TYPE_PWM                        12
+#define CH_TYPE_RTD_2_WIRES                13
+#define CH_TYPE_RTD_3_WIRES                14
+#define CH_TYPE_V_DAC                      15
+#define CH_TYPE_C_DAC                      16
+#define CH_TYPE_V_DAC_WITH_C_ADC           17
+#define CH_TYPE_C_DAC_WITH_V_ADC           18
+#define CH_TYPE_LED                        19
 
 #define CH_TYPE_NO_TYPE (255)
 
@@ -67,6 +71,10 @@ typedef uint8_t chType_t;
 #define CH_UNIT_DIGIT    6
 
 typedef uint8_t chUnit_t;
+
+
+#define UNO_R4_DISPLAY_ADDITIONAL_TYPE   255
+
 
 class ChCfg {
 public:
