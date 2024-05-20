@@ -69,6 +69,13 @@ typedef uint8_t chType_t;
 #define CH_UNIT_mAMPERE  4
 #define CH_UNIT_OHM      5
 #define CH_UNIT_DIGIT    6
+#define CH_UNIT_HERTZ    7
+#define CH_UNIT_mHERTZ   8
+#define CH_UNIT_KHERTZ   9
+#define CH_UNIT_MHERTZ   10
+#define CH_UNIT_PERC     11
+#define CH_UNIT_NO_VALUE 12
+
 
 typedef uint8_t chUnit_t;
 

@@ -29,9 +29,9 @@ OptaUnoR4Display::OptaUnoR4Display()
     : Module(&Wire1, DETECT_IN, DETECT_OUT), 
     btn_pressed(EVENT_NO_EVENT),
     display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET), 
-    exp_selected(0),
-    num_of_expansions(0) ,
-    exp_selected_from_controller(255),
+    exp_selected(255),
+    i2c_num_of_exp(0) ,
+    i2c_exp_selected(255),
     reset_state_machine(false) {
 }
 
@@ -89,7 +89,7 @@ void OptaUnoR4Display::update() {
   if (btn_pressed == EVENT_NO_EVENT) {
     btn_pressed = ev;
   }
-  debugReceivedMsg();
+  //debugReceivedMsg();
   debugButtonEvent(btn_pressed);
 
   main_state_machine();
@@ -377,18 +377,11 @@ bool OptaUnoR4Display::parse_set_expansion_features() {
                          Cmd_EXP_FEATURES,
                          Len_EXP_FEATURES, 
                          EXP_FEATURES_Len)) {
-    if(use_expansion_features) {
-      exp_selected_from_controller = rx_buffer[EXP_FEATURES_IndexPos];
-      exp_type = rx_buffer[EXP_FEATURES_TypePos];
-      exp_num_of_channels = rx_buffer[EXP_FEATURES_ChNumPos];
-      use_expansion_features = false;
-      for(int i = 0; i < MAX_CHANNEL_DISPLAYABLE; i++) {
-         ch_cfg[i].type = CH_TYPE_NO_TYPE;
-      }
-    }
-
     
-
+    i2c_exp_selected = rx_buffer[EXP_FEATURES_IndexPos];
+    i2c_exp_type = rx_buffer[EXP_FEATURES_TypePos];
+    i2c_exp_channel_num = rx_buffer[EXP_FEATURES_ChNumPos];
+    
     return true;
   }
 
@@ -402,7 +395,7 @@ bool OptaUnoR4Display::parse_set_num_of_expansion() {
                          Len_EXP_NUM, 
                          EXP_NUM_Len)) {
 
-    num_of_expansions = rx_buffer[EXP_NUM_NumPos];
+    i2c_num_of_exp = rx_buffer[EXP_NUM_NumPos];
     return true;
   }
 
@@ -548,10 +541,8 @@ void OptaUnoR4Display::draw_select_expansion_menu(uint8_t n){
   display.display();
 }
 
-/* ____________________________________________ DRAW: show expansion channels */
-void OptaUnoR4Display::draw_expansion_page() {
-  display.clearDisplay();
-
+/* ___________Write the type of the expansion and the index on expansion page */
+void OptaUnoR4Display::write_expansion_page_title() {
   /* Expansion */
   display.setTextSize(2);             // Normal 1:1 pixel scale
   display.setTextColor(SSD1306_WHITE);        // Draw white text
@@ -560,7 +551,7 @@ void OptaUnoR4Display::draw_expansion_page() {
   Serial.println("Expansion type " +  String(exp_type));
   /* type of expansion */
   if(exp_type == EXPANSION_DIGITAL_INVALID) {
-    display.print("Digital? ");
+    display.print("Digital ");
   }
   else if(exp_type == EXPANSION_OPTA_DIGITAL_MEC) {
     display.print("Dig MEC ");
@@ -576,155 +567,224 @@ void OptaUnoR4Display::draw_expansion_page() {
   }
 
   /* number of expansion */
-  display.println(exp_selected_from_controller);
+  display.println(exp_selected);
+}
+
+
+void OptaUnoR4Display::write_cursor_and_ch_index(uint8_t r, uint8_t s) {
+  if(r == s) {
+      display.print(">");
+  }
+  else {
+    display.print(" ");
+  }
+  display.print(r);
+  if(r < 10) {
+    display.print(" ");
+  }
+  display.print(" ");
+}
+
+uint8_t OptaUnoR4Display::how_many_row_take_channel(uint8_t ch) {
+  uint8_t rv = 1;
+  if(ch < MAX_CHANNEL_DISPLAYABLE) {
+    if(ch_cfg[ch].units[1] != CH_UNIT_NO_UNIT) {
+      rv++;
+    }
+  }
+  else {
+   rv =  0;
+  }
+  Serial.println("how many takes: " + String(rv));
+  return rv;
+}
+
+
+void OptaUnoR4Display::display_value_of_channel(uint8_t ch, uint8_t index) {
+  if(index >= 2) {
+    return;
+  }
+  if(ch_cfg[ch].units[index] == CH_UNIT_VOLT) {
+      display.print(ch_cfg[ch].values[index],1);
+      display.println("V ");   
+  }
+  else if(ch_cfg[ch].units[index] == CH_UNIT_mVOLT) {
+    display.print(ch_cfg[ch].values[index],1);
+    display.println("mV ");
+    
+  }
+  else if(ch_cfg[ch].units[index] == CH_UNIT_AMPERE) {
+    display.print(ch_cfg[ch].values[index],1);
+    display.println("A ");
+    
+  }
+  else if(ch_cfg[ch].units[index] == CH_UNIT_mAMPERE) {
+    display.print(ch_cfg[ch].values[index],1);
+    display.println("mA ");
+  }
+  else if(ch_cfg[ch].units[index] == CH_UNIT_OHM) {
+    display.print(ch_cfg[ch].values[index],1);
+    display.println("ohm ");
+  }
+  else if(ch_cfg[ch].units[index] == CH_UNIT_DIGIT) {
+    display.print(ch_cfg[ch].values[index],0);
+    display.println(" ");
+  }
+  else if(ch_cfg[ch].units[index] == CH_UNIT_HERTZ) {
+    display.print(ch_cfg[ch].values[index],1);
+    display.println("Hz ");
+  }
+  else if(ch_cfg[ch].units[index] == CH_UNIT_mHERTZ) {
+    display.print(ch_cfg[ch].values[index],1);
+    display.println("mHz ");
+  }
+  else if(ch_cfg[ch].units[index] == CH_UNIT_KHERTZ) {
+    display.print(ch_cfg[ch].values[index],1);
+    display.println("KHz ");
+  }
+  else if(ch_cfg[ch].units[index] == CH_UNIT_MHERTZ) {
+    display.print(ch_cfg[ch].values[index],1);
+    display.println("MHz ");
+  }
+  else if(ch_cfg[ch].units[index] == CH_UNIT_PERC) {
+    display.print(ch_cfg[ch].values[index],1);
+    display.println("% ");
+  }
+  else if(ch_cfg[ch].units[index] == CH_UNIT_NO_VALUE) {
+    display.println(" ");
+  }
+}
+
+
+/* write on the display the row r (1 or 2) of the channel ch 
+   return true if the row is written (consumed) */
+bool OptaUnoR4Display::display_row_channel(uint8_t ch, uint8_t r) {
+  if(ch >= MAX_CHANNEL_DISPLAYABLE) {
+    return false;
+  }
   
+  if(r == 1) {
+
+    /* channel type  */
+    if(ch_cfg[ch].type == CH_TYPE_HIGH_IMPEDENCE ||
+       ch_cfg[ch].type == CH_TYPE_HIGH_IMPEDENCE_WITH_V_ADC) {
+      display.print("HIM  ");
+    }
+    else if(ch_cfg[ch].type == CH_TYPE_DIGITAL_IN ||
+       ch_cfg[ch].type == CH_TYPE_DIGITAL_IN_WITH_V_ADC ||
+       ch_cfg[ch].type == CH_TYPE_DIGITAL_IN_WITH_C_ADC) {
+      display.print("DIN  ");
+    }
+    else if(ch_cfg[ch].type == CH_TYPE_DIGITAL_OUT ||
+       ch_cfg[ch].type == CH_TYPE_DIGITAL_OUT_WITH_V_ADC ||
+       ch_cfg[ch].type == CH_TYPE_DIGITAL_OUT_WITH_C_ADC) {
+      display.print("DOUT ");
+    }
+    else if(ch_cfg[ch].type == CH_TYPE_V_ADC ||
+       ch_cfg[ch].type == CH_TYPE_V_ADC_WITH_C_ADC ) {
+      display.print("VADC ");
+    }
+    else if(ch_cfg[ch].type == CH_TYPE_C_ADC ||
+       ch_cfg[ch].type == CH_TYPE_C_ADC_WITH_V_ADC ) {
+      display.print("CADC ");
+    }
+    else if(ch_cfg[ch].type == CH_TYPE_PWM  ) {
+      display.print("PWM  ");
+    }
+    else if(ch_cfg[ch].type == CH_TYPE_RTD_2_WIRES ||
+       ch_cfg[ch].type == CH_TYPE_RTD_3_WIRES ) {
+      display.print("RTD  ");
+    }
+    else if(ch_cfg[ch].type == CH_TYPE_V_DAC ||
+       ch_cfg[ch].type == CH_TYPE_V_DAC_WITH_C_ADC ) {
+      display.print("VDAC ");
+    }
+    else if(ch_cfg[ch].type == CH_TYPE_C_DAC ||
+      ch_cfg[ch].type == CH_TYPE_C_DAC_WITH_V_ADC ) {
+      display.print("CDAC ");
+    }
+    else if(ch_cfg[ch].type == CH_TYPE_LED) {
+      display.print("LED  ");
+    }
+    else {
+      display.println("---- ");
+      return true;
+    }
+    display_value_of_channel(ch, 0);
+    return true;
+
+  }
+  else if(r == 2) {
+    if(ch_cfg[ch].units[1] != CH_UNIT_NO_UNIT) {
+      display.print("         ");
+      display_value_of_channel(ch, 1);
+      return true;
+    }
+
+  }
+  return false;
+}
+
+
+/* ____________________________________________ DRAW: show expansion channels */
+void OptaUnoR4Display::draw_expansion_page() {
+  static uint8_t first_ch_displayed = 0;
+  static uint8_t last_ch_displayed = 0;
+
+  display.clearDisplay();
+
+  write_expansion_page_title();
 
   display.setTextSize(1);  
   display.setCursor(0,16);
 
-  if(exp_num_of_channels < MAX_ROW_DISPLAYED_PER_PAGE) {
-    final_row = exp_num_of_channels;
-  }
-  else {
-    final_row = MAX_ROW_DISPLAYED_PER_PAGE;
+  Serial.println("selected row: " + String(selected_row) + " first: " + String(first_ch_displayed) + " last: " + String(last_ch_displayed));
+  
+  while(selected_row >= exp_channel_num) {
+    selected_row--;
   }
   
-  while(selected_row < initial_row) {
-    if(initial_row > 0) {
-      initial_row--;
-      final_row--;
+  while(selected_row < 0) {
+    selected_row++;
+  }
+
+  if(selected_row > last_ch_displayed) {
+    first_ch_displayed++;
+  }
+
+  if(selected_row < first_ch_displayed) {
+    first_ch_displayed--;
+  }
+  
+  int r = -1;
+  uint8_t current_ch_displayed = first_ch_displayed;;
+  while(current_ch_displayed < exp_channel_num) {
+    Serial.println("  current ch: " + String(current_ch_displayed));
+    write_cursor_and_ch_index(current_ch_displayed, selected_row);
+    
+    if(display_row_channel(current_ch_displayed, 1)) {
+      Serial.println("  row++");
+
+      r++;
     }
-    else {
-      selected_row = 0;
+    if(display_row_channel(current_ch_displayed, 2)) {
+      Serial.println("  row++");
+      r++;
+    }
+    last_ch_displayed = current_ch_displayed;
+    current_ch_displayed++;
+
+    Serial.println("  row = " + String(r));
+
+    if(how_many_row_take_channel(current_ch_displayed) == 0 || r + how_many_row_take_channel(current_ch_displayed) >= 5) {
+      Serial.println("  exit while");
+      break;
     }
   }
-  if(selected_row >= exp_num_of_channels ) {
-    selected_row = exp_num_of_channels - 1;
+  if(r == 3) {
+    display.println(" ");
   }
-  while(selected_row > final_row - 1) {
-    if(final_row < exp_num_of_channels) {
-      final_row++;
-      initial_row++;
-    }
-  }
-  Serial.println("selected row " + String(selected_row));
-  for(int i = initial_row; i < final_row; i++) {
-    if(selected_row == i) {
-      display.print(">");
-    }
-    else {
-      display.print(" ");
-    }
 
-    display.print(i);
-    if(i < 10) {
-      display.print(" ");
-    }
-    display.print(" ");
-    if(ch_cfg[i].type == CH_TYPE_HIGH_IMPEDENCE ||
-       ch_cfg[i].type == CH_TYPE_HIGH_IMPEDENCE_WITH_V_ADC) {
-      display.print("HI ");
-    }
-    else if(ch_cfg[i].type == CH_TYPE_DIGITAL_IN ||
-       ch_cfg[i].type == CH_TYPE_DIGITAL_IN_WITH_V_ADC ||
-       ch_cfg[i].type == CH_TYPE_DIGITAL_IN_WITH_C_ADC) {
-      display.print("DI ");
-    }
-    else if(ch_cfg[i].type == CH_TYPE_DIGITAL_OUT ||
-       ch_cfg[i].type == CH_TYPE_DIGITAL_OUT_WITH_V_ADC ||
-       ch_cfg[i].type == CH_TYPE_DIGITAL_OUT_WITH_C_ADC) {
-      display.print("DO ");
-    }
-    else if(ch_cfg[i].type == CH_TYPE_V_ADC ||
-       ch_cfg[i].type == CH_TYPE_V_ADC_WITH_C_ADC ) {
-      display.print("VA ");
-    }
-    else if(ch_cfg[i].type == CH_TYPE_C_ADC ||
-       ch_cfg[i].type == CH_TYPE_C_ADC_WITH_V_ADC ) {
-      display.print("CA ");
-    }
-    else if(ch_cfg[i].type == CH_TYPE_PWM  ) {
-      display.print("PW ");
-    }
-    else if(ch_cfg[i].type == CH_TYPE_RTD_2_WIRES ||
-       ch_cfg[i].type == CH_TYPE_RTD_3_WIRES ) {
-      display.print("RT ");
-    }
-    else if(ch_cfg[i].type == CH_TYPE_V_DAC ||
-       ch_cfg[i].type == CH_TYPE_V_DAC_WITH_C_ADC ) {
-      display.print("VD ");
-    }
-    else if(ch_cfg[i].type == CH_TYPE_C_DAC ||
-      ch_cfg[i].type == CH_TYPE_C_DAC_WITH_V_ADC ) {
-      display.print("CD ");
-    }
-    else if(ch_cfg[i].type == CH_TYPE_LED) {
-      display.print("LE ");
-    }
-    else {
-      display.print("-- ");
-    }
-
-    
-    
-    if(ch_cfg[i].units[0] == CH_UNIT_VOLT) {
-      display.print(ch_cfg[i].values[0],1);
-      display.print("V ");
-    }
-    else if(ch_cfg[i].units[0] == CH_UNIT_mVOLT) {
-      display.print(ch_cfg[i].values[0],1);
-      display.print("mV ");
-    }
-    else if(ch_cfg[i].units[0] == CH_UNIT_AMPERE) {
-      display.print(ch_cfg[i].values[0],1);
-      display.print("A ");
-    }
-    else if(ch_cfg[i].units[0] == CH_UNIT_mAMPERE) {
-      display.print(ch_cfg[i].values[0],1);
-      display.print("mA ");
-    }
-    else if(ch_cfg[i].units[0] == CH_UNIT_OHM) {
-      display.print(ch_cfg[i].values[0],1);
-      display.print("ohm ");
-    }
-    else if(ch_cfg[i].units[0] == CH_UNIT_DIGIT) {
-      display.print(ch_cfg[i].values[0],0);
-      display.print(" ");
-    }
-   
-    
-    if(ch_cfg[i].units[1] != CH_UNIT_NO_UNIT) {
-    
-      if(ch_cfg[i].units[1] == CH_UNIT_VOLT) {
-        display.print(ch_cfg[i].values[1],1);
-        display.print("V");
-      }
-      else if(ch_cfg[i].units[1] == CH_UNIT_mVOLT) {
-        display.print(ch_cfg[i].values[1],1);
-        display.print("mV");
-      }
-      else if(ch_cfg[i].units[1] == CH_UNIT_AMPERE) {
-        display.print(ch_cfg[i].values[1],1);
-        display.print("A");
-      }
-      else if(ch_cfg[i].units[1] == CH_UNIT_mAMPERE) {
-        display.print(ch_cfg[i].values[1],1);
-        display.print("mA");
-      }
-      else if(ch_cfg[i].units[1] == CH_UNIT_OHM) {
-        display.print(ch_cfg[i].values[1],1);
-        display.print("ohm");
-      }
-      else if(ch_cfg[i].units[1] == CH_UNIT_DIGIT) {
-        display.print(ch_cfg[i].values[1],0);
-        display.print("");
-      }
-    }
-    display.println();
-
-    
-
-  } 
   display.println("Hold 'left' to back");
   display.display();
 
@@ -762,7 +822,7 @@ void OptaUnoR4Display::main_state_machine() {
   static displayState_t st = STATE_WELCOME_DRAW;
   static long long time = millis();
   /*
-  for(int i = 0; i < exp_num_of_channels; i++) {
+  for(int i = 0; i < exp_channel_num; i++) {
     Serial.print(i);
     Serial.print(" ");
     Serial.print("type " + String(ch_cfg[i].type) + " ");
@@ -794,7 +854,7 @@ void OptaUnoR4Display::main_state_machine() {
       /* wait some time and then depending on the number of expansions make a 
          choice */
       if(millis() - time > WELCOME_PAGE_TIME) {
-        if(num_of_expansions == 0) {
+        if(i2c_num_of_exp == 0) {
           st = STATE_WAIT_FOR_EXPANSION;
         }
         else {
@@ -806,8 +866,8 @@ void OptaUnoR4Display::main_state_machine() {
     case STATE_WAIT_FOR_EXPANSION:
       //Serial.println("STATE_WAIT_FOR_EXPANSION");
       
-      //Serial.println("n: " + String(num_of_expansions));
-      if(num_of_expansions > 0) {
+      //Serial.println("n: " + String(i2c_num_of_exp));
+      if(i2c_num_of_exp > 0) {
         st = STATE_SELECT_EXPANSION;
       }
       else {
@@ -816,19 +876,21 @@ void OptaUnoR4Display::main_state_machine() {
     break;
     /*--------------------------------------------------- Select an expansion */
     case STATE_SELECT_EXPANSION:
-      use_expansion_features = false;
-      exp_selected_from_controller = 255;
+
+      exp_selected = 255;
+
+      
       //Serial.println("STATE_SELECT_EXPANSION");
       draw_select_expansion_menu(current_expansion);
-      
+      for(int i = 0; i < MAX_CHANNEL_DISPLAYABLE; i++) {
+         ch_cfg[i].type = CH_TYPE_NO_TYPE;
+      }
       st = STATE_SELECT_EXPANSION_WAIT_BUTTONS;
       
 
     break;
     /*--------------------------------------Handle button to select expansion */
     case STATE_SELECT_EXPANSION_WAIT_BUTTONS:
-      use_expansion_features = false;
-      exp_selected_from_controller = 255;
       //Serial.println("STATE_SELECT_EXPANSION_WAIT_BUTTONS");
       if(btn_pressed == EVENT_LEFT) {
         current_expansion--;
@@ -841,21 +903,24 @@ void OptaUnoR4Display::main_state_machine() {
       if(current_expansion == 255) {
         current_expansion = 0;
       }
-      if(current_expansion >= num_of_expansions) {
-        current_expansion = num_of_expansions - 1;
+      if(current_expansion >= i2c_num_of_exp) {
+        current_expansion = i2c_num_of_exp - 1;
       }
 
       if(btn_pressed == EVENT_DOWN_LONG) {
         exp_selected = current_expansion;
-        use_expansion_features = true;
+        
         st = STATE_WAIT_EXPANSION_FEATURES;
       }
       break;
 
     case STATE_WAIT_EXPANSION_FEATURES:
+      exp_selected = current_expansion;
       draw_wait_for_expansion_features();
-      if(exp_selected_from_controller != 255) {
+      if(i2c_exp_selected == exp_selected) {
         st = STATE_SHOW_EXPANSION;
+        exp_type = i2c_exp_type;
+        exp_channel_num = i2c_exp_channel_num;
       }
       break;
       

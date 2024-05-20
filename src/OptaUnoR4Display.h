@@ -68,12 +68,17 @@ protected:
   BtnEvent_t btn_pressed;
   Adafruit_SSD1306 display;
 
+  volatile uint8_t i2c_num_of_exp;
+
   volatile uint8_t exp_selected;
-  volatile uint8_t exp_selected_from_controller;
-  volatile uint8_t num_of_expansions;
+  volatile uint8_t i2c_exp_selected;
+  
+  volatile uint8_t i2c_exp_type;
   volatile uint8_t exp_type;
-  volatile uint8_t exp_num_of_channels = 0;
-  volatile bool use_expansion_features = false;
+
+  volatile uint8_t exp_channel_num = 0;
+  volatile uint8_t i2c_exp_channel_num = 0;
+  
   volatile bool update_expansion_features = false;
   volatile bool reset_state_machine;
 
@@ -108,6 +113,12 @@ protected:
   BtnEvent_t fire_button_event(BtnStatus_t st, int counter, bool &fired,
                                bool &long_fired);
   BtnEvent_t button_pressed();
+
+  void write_expansion_page_title();
+  void write_cursor_and_ch_index(uint8_t r, uint8_t s);
+  uint8_t how_many_row_take_channel(uint8_t ch);
+  bool display_row_channel(uint8_t ch, uint8_t r);
+  void display_value_of_channel(uint8_t ch, uint8_t index);
 };
 #endif
 #endif
