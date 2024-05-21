@@ -87,6 +87,7 @@ class ChCfg {
 public:
   chType_t type;
   float values[2];
+  
   chUnit_t units[2];
   ChCfg(): type(CH_TYPE_NO_TYPE) {
     values[0] = 0.0;

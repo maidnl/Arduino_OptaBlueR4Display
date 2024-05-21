@@ -25,8 +25,27 @@
 #define EXECUTE_SET_NUM_OF_EXPANSION       254
 #define EXECUTE_SET_EXPANSION_FEATURES     253
 #define EXECUTE_SET_CHANNEL_CONFIGURATION  252
+#define EXECUTE_GET_CH_VALUE               251
+#define EXECUTE_GET_CH_CONFIG              250
 
 namespace Opta {
+
+class ChangeChValue {
+public:
+  uint8_t exp_index;
+  uint8_t exp_type;
+  uint8_t exp_channel;
+  float value;
+};
+
+class ChangeChConfig {
+public:
+  uint8_t exp_index;
+  uint8_t exp_type;
+  uint8_t exp_channel;
+  uint8_t config;
+};
+
 
 class R4DisplayExpansion : public Expansion {
 
@@ -51,6 +70,11 @@ public:
                                float v2, 
                                chUnit_t u2);
 
+  /* nothing has to be changed return exp_index = 255 */
+  ChangeChValue getUpdateChValue();
+  /* nothing has to be changed return exp_index = 255 */
+  ChangeChConfig getUpdateChConfig();
+
 
   /* static mandatory function to be implemented by all expansions! */
   static Expansion *makeExpansion();
@@ -58,6 +82,10 @@ public:
   static void startUp(Controller *ptr);
 
 protected:
+  //volatile ChangeChValue change_value;
+  //volatile ChangeChConfig change_config;
+
+
   unsigned int i2c_transaction(uint8_t (R4DisplayExpansion::*prepare)(),
                                bool (R4DisplayExpansion::*parse)(),
                                int rx_bytes);
@@ -67,6 +95,12 @@ protected:
   uint8_t msg_set_num_of_expansions();
   uint8_t msg_set_expansion_features();
   uint8_t msg_set_channel_configuration();
+
+  uint8_t msg_get_ch_change_config();
+  bool parse_get_ch_change_config();
+
+  uint8_t msg_get_ch_change_value();
+  bool parse_get_ch_change_value();
 };
 
 } // namespace Opta

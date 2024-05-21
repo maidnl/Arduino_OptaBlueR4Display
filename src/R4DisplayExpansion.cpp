@@ -82,6 +82,71 @@ uint8_t R4DisplayExpansion::msg_get_selected_expansion() {
   return rv;
 
 }
+/* ______________________________________________PREPARE: get change ch value */
+uint8_t R4DisplayExpansion::msg_get_ch_change_value() {
+  if (ctrl == nullptr) return 0;
+  
+  uint8_t rv =  prepareGetMsg(ctrl->getTxBuffer(),
+                              Cmd_GET_CH_VALUE,
+                              Len_GET_CH_VALUE, 
+                              GET_CH_VALUE_Len);
+
+}
+
+/* ________________________________________________PARSE: get change ch value */  
+bool R4DisplayExpansion::parse_get_ch_change_value() {
+  if(checkAnsGetReceived(ctrl->getRxBuffer(), 
+                         Ans_GET_CH_VALUE,
+                         AnsLen_GET_CH_VALUE, 
+                         Ans_GET_CH_VALUE_Len)) {
+    
+    //change_value.exp_index = ctrl->getRxBuffer()[Ans_GET_CH_VALUE_IndexPos];
+    //change_value.exp_type = ctrl->getRxBuffer()[Ans_GET_CH_VALUE_ExpTypePos];
+    //change_value.exp_channel = ctrl->getRxBuffer()[Ans_GET_CH_VALUE_ChannelPos];
+
+    Float_u v;
+    v.bytes[0] = ctrl->getRxBuffer()[Ans_GET_CH_VALUE_ValuePos + 0];
+    v.bytes[1] = ctrl->getRxBuffer()[Ans_GET_CH_VALUE_ValuePos + 1];
+    v.bytes[2] = ctrl->getRxBuffer()[Ans_GET_CH_VALUE_ValuePos + 2];
+    v.bytes[3] = ctrl->getRxBuffer()[Ans_GET_CH_VALUE_ValuePos + 3];
+
+    //change_value.value = v.value;
+
+    return true;
+  }
+  return false;
+}
+
+/* ____________________________________________PREPARE : get change ch config */
+uint8_t R4DisplayExpansion::msg_get_ch_change_config(){
+  if (ctrl == nullptr) return 0;
+  
+  uint8_t rv =  prepareGetMsg(ctrl->getTxBuffer(),
+                              Cmd_GET_CH_CONFIG,
+                              Len_GET_CH_CONFIG, 
+                              GET_CH_CONFIG_Len);
+
+}
+
+/* _______________________________________________PARSE: get change ch config */
+bool R4DisplayExpansion::parse_get_ch_change_config() {
+  if(checkAnsGetReceived(ctrl->getRxBuffer(), 
+                         Ans_GET_CH_CONFIG,
+                         AnsLen_GET_CH_CONFIG, 
+                         Ans_GET_CH_VALUE_Len)) {
+    
+    //change_value.exp_index = ctrl->getRxBuffer()[Ans_GET_CH_CONFIG_IndexPos];
+    //change_value.exp_type = ctrl->getRxBuffer()[Ans_GET_CH_CONFIG_ExpTypePos];
+    //change_value.exp_channel = ctrl->getRxBuffer()[Ans_GET_CH_CONFIG_ChannelPos];
+    //change_value.value = ctrl->getRxBuffer()[Ans_GET_CH_CONFIG_ConfigPos];
+
+    return true;
+  }
+  return false;
+}
+
+
+
 
 /* _________________________________________PARSE: ans get selected expansion */
 bool R4DisplayExpansion::parse_ans_get_selected_expansion() {

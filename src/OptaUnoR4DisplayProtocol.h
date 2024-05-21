@@ -74,5 +74,36 @@
 
 #define EXP_NUM_AnsLen            ACK_Len
 
+/*__________________________________________COMMAND: GET CHANNEL CHANGE VALUE */
+#define Cmd_GET_CH_VALUE          0x05
+#define Len_GET_CH_VALUE          0
+#define GET_CH_VALUE_Len          (BP_HEADER_DIM + Len_GET_CH_VALUE)
+
+/* __________________________________________ANSWER: GET CHANNEL CHANGE VALUE */
+#define Ans_GET_CH_VALUE                Cmd_GET_CH_VALUE                                   
+#define AnsLen_GET_CH_VALUE             7
+#define Ans_GET_CH_VALUE_IndexPos       (BP_HEADER_DIM + 0)
+#define Ans_GET_CH_VALUE_ExpTypePos     (BP_HEADER_DIM + 1)
+#define Ans_GET_CH_VALUE_ChannelPos     (BP_HEADER_DIM + 2)
+#define Ans_GET_CH_VALUE_ValuePos       (BP_HEADER_DIM + 3)
+#define Ans_GET_CH_VALUE_Len            (BP_HEADER_DIM + AnsLen_GET_CH_VALUE)
+
+#define GET_CH_VALUE_AnsLen             Ans_GET_CH_VALUE_Len
+
+/*_________________________________________COMMAND: GET CHANNEL CHANGE CONFIG */
+#define Cmd_GET_CH_CONFIG          0x06
+#define Len_GET_CH_CONFIG          0
+#define GET_CH_CONFIG_Len          (BP_HEADER_DIM + Len_GET_CH_VALUE)
+
+/* __________________________________________ANSWER: GET CHANNEL CHANGE VALUE */
+#define Ans_GET_CH_CONFIG                Cmd_GET_CH_CONFIG                                   
+#define AnsLen_GET_CH_CONFIG             4
+#define Ans_GET_CH_CONFIG_IndexPos       (BP_HEADER_DIM + 0)
+#define Ans_GET_CH_CONFIG_ExpTypePos     (BP_HEADER_DIM + 1)
+#define Ans_GET_CH_CONFIG_ChannelPos     (BP_HEADER_DIM + 2)
+#define Ans_GET_CH_CONFIG_ConfigPos      (BP_HEADER_DIM + 3)
+#define Ans_GET_CH_CONFIG_Len            (BP_HEADER_DIM + AnsLen_GET_CH_CONFIG)
+
+#define GET_CH_CONFIG_AnsLen             Ans_GET_CH_CONFIG_Len
 
 #endif
