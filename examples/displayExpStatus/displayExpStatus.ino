@@ -12,6 +12,18 @@
 /* -------------------------------------------------------------------------- */
 
 
+/* This example shows how to use an UNO R4 Wifi equipped with 4 buttons and 
+   on small LCD display to display information about Analog and Digital Expansion
+   attached to Opta Controller 
+   The R4 display not only show information but also can be used to change
+   values and configuration of other espansion
+   Please note that the Opta Controller is always the master so it has to 
+   poll periodically the R4 display to get if the user wants to change the 
+   configuration or the value of a certain channel 
+   This sketch also provide a Serial interface allowing to do the same, i.e.
+   change the status or the configuration of channel expansions */
+
+
 #include "OptaBlue.h"
 #include "R4DisplayExpansion.h"
 
@@ -478,6 +490,260 @@ void changeExpansion(uint8_t device) {
 }
 
 
+void sendDigitalExpansionInfo2R4Display(uint8_t index, R4DisplayExpansion &r4) {
+  /* handle selected expansion - if digital*/
+  DigitalExpansion de = OptaController.getExpansion(index);
+  if(de) {
+    /* Telling r4 it has to display a digital expansion 
+      using EXPANSION_DIGITAL_INVALID as generic digital expansion type */
+    r4.setExpansionFeatures(EXPANSION_DIGITAL_INVALID, index, 8+16);
+   
+    /* informing r4 about the channel status of digital output */
+    for(int k = 0; k < DIGITAL_OUT_NUM; k++) {
+      
+      r4.setChannelConfiguration(k, CH_TYPE_DIGITAL_OUT,
+                         (float)de.digitalOutRead(k), 
+                         CH_UNIT_DIGIT,
+                         0.0, 
+                         CH_UNIT_NO_UNIT);
+    }
+    /* informing r4 about the channel status of digital/analog input */
+    for(int k = 0; k < DIGITAL_IN_NUM; k++) {
+      
+      
+      r4.setChannelConfiguration(DIGITAL_OUT_NUM + k, CH_TYPE_DIGITAL_IN_WITH_V_ADC,
+                                 (float)de.digitalRead(k,true), 
+                                 CH_UNIT_DIGIT,
+                                 (float)de.pinVoltage(k,true), 
+                                 CH_UNIT_VOLT);
+    }
+  }
+}
+
+void sendAnalogExpansionInfo2R4Display(uint8_t index, R4DisplayExpansion &r4) {
+  /* handle selected expansion - if analog */
+   AnalogExpansion ae = OptaController.getExpansion(index);
+   if(ae) {
+      r4.setExpansionFeatures(EXPANSION_OPTA_ANALOG, index, 8+4);
+      for(int k = 0; k < OA_AN_CHANNELS_NUM; k++) {
+        /* HIGH IMPEDENCE */
+        if(ae.isChHighImpedance(k)) {
+          if(ae.isChVoltageAdc(k)) {
+            r4.setChannelConfiguration(k, CH_TYPE_HIGH_IMPEDENCE_WITH_V_ADC,
+                                   (float)0.0, 
+                                   CH_UNIT_NO_VALUE,
+                                   (float)ae.pinVoltage(k,true), 
+                                   CH_UNIT_VOLT);
+
+          }
+          else {
+            r4.setChannelConfiguration(k, CH_TYPE_HIGH_IMPEDENCE,
+                                   (float)0.0, 
+                                   CH_UNIT_NO_VALUE,
+                                   (float)0.0, 
+                                   CH_UNIT_NO_UNIT);
+          }
+        }
+        /* DIGITAL INPUT */
+        else if(ae.isChDigitalInput(k)) {
+          if(ae.isChVoltageAdc(k)) {
+            r4.setChannelConfiguration(k, CH_TYPE_DIGITAL_IN_WITH_V_ADC,
+                                   (float)ae.digitalRead(k,true),
+                                   CH_UNIT_DIGIT,
+                                   (float)ae.pinVoltage(k,true), 
+                                   CH_UNIT_VOLT);
+
+          }
+          else if(ae.isChCurrentAdc(k)) {
+            r4.setChannelConfiguration(k, CH_TYPE_DIGITAL_IN_WITH_C_ADC,
+                                   (float)ae.digitalRead(k,true),
+                                   CH_UNIT_DIGIT,
+                                   (float)ae.pinCurrent(k,true), 
+                                   CH_UNIT_mAMPERE);
+
+          }
+          else {
+            r4.setChannelConfiguration(k, CH_TYPE_DIGITAL_IN,
+                                   (float)ae.digitalRead(k,true), 
+                                   CH_UNIT_DIGIT,
+                                   (float)0.0, 
+                                   CH_UNIT_NO_UNIT);
+          }
+        }
+        /* VOLTAGE ADC */
+        else if(ae.isChVoltageAdc(k)) {
+          if(ae.isChCurrentAdc(k)) {
+            r4.setChannelConfiguration(k, CH_TYPE_V_ADC_WITH_C_ADC,
+                                   (float)ae.pinVoltage(k,true), 
+                                   CH_UNIT_VOLT,
+                                   (float)ae.pinCurrent(k,true), 
+                                   CH_UNIT_mAMPERE);
+          }
+          else {
+
+            r4.setChannelConfiguration(k, CH_TYPE_V_ADC,
+                                   (float)ae.pinVoltage(k,true), 
+                                   CH_UNIT_VOLT,
+                                   (float)0.0, 
+                                   CH_UNIT_NO_UNIT);
+          }
+        }
+        /* CURRENT ADC */
+        else if(ae.isChCurrentAdc(k)) {
+          if(ae.isChVoltageAdc(k)) {
+            r4.setChannelConfiguration(k, CH_TYPE_C_ADC_WITH_V_ADC,
+                                   (float)ae.pinCurrent(k,true), 
+                                   CH_UNIT_mAMPERE,
+                                   (float)ae.pinVoltage(k,true), 
+                                   CH_UNIT_VOLT);
+          }
+          else {
+            r4.setChannelConfiguration(k, CH_TYPE_C_ADC,
+                                   (float)ae.pinCurrent(k,true), 
+                                   CH_UNIT_mAMPERE,
+                                   (float)0.0, 
+                                   CH_UNIT_NO_UNIT);
+          }
+        }
+        /* VOLTAGE DAC */
+        else if(ae.isChVoltageDac(k)) {
+          if(ae.isChCurrentAdc(k)) {
+            r4.setChannelConfiguration(k, CH_TYPE_V_DAC_WITH_C_ADC,
+                                   (float)ae.pinVoltage(k,true), 
+                                   CH_UNIT_VOLT,
+                                   (float)ae.pinCurrent(k,true), 
+                                   CH_UNIT_mAMPERE);
+          }
+          else {
+            r4.setChannelConfiguration(k, CH_TYPE_V_DAC,
+                                   (float)ae.pinVoltage(k,true), 
+                                   CH_UNIT_VOLT,
+                                   (float)0.0, 
+                                   CH_UNIT_NO_UNIT);
+          }
+
+        }
+        /* CURRENT DAC */
+        else if(ae.isChCurrentDac(k)) {
+          if(ae.isChVoltageAdc(k)) {
+            r4.setChannelConfiguration(k, CH_TYPE_C_DAC_WITH_V_ADC,
+                                   (float)ae.pinCurrent(k,true), 
+                                   CH_UNIT_mAMPERE,
+                                   (float)ae.pinVoltage(k,true), 
+                                   CH_UNIT_VOLT);
+          }
+          else {
+            r4.setChannelConfiguration(k, CH_TYPE_RTD_2_WIRES,
+                                   (float)ae.pinCurrent(k,true), 
+                                   CH_UNIT_OHM,
+                                   (float)0.0, 
+                                   CH_UNIT_NO_UNIT);
+          }
+        }
+        /* RTD */
+        else if(ae.isChRtd(k)) {
+          r4.setChannelConfiguration(k, CH_TYPE_C_DAC,
+                                   (float)ae.getRtd(k), 
+                                   CH_UNIT_mAMPERE,
+                                   (float)0.0, 
+                                   CH_UNIT_NO_UNIT);
+
+        }
+
+        for(int k = OA_FIRST_PWM_CH; k <= OA_LAST_PWM_CH; k++) {
+          r4.setChannelConfiguration(k, CH_TYPE_PWM,
+                                   (float)ae.getPwmFreqHz(k), 
+                                   CH_UNIT_HERTZ,
+                                   (float)ae.getPwmPulsePerc(k),  
+                                   CH_UNIT_PERC);
+
+        }
+
+      }
+
+   }
+
+  
+}
+
+void sendR4DisplayInfo2R4Display(uint8_t index, R4DisplayExpansion &r4) {
+  R4DisplayExpansion re = OptaController.getExpansion(index);
+  if(re) {
+    r4.setExpansionFeatures(UNO_R4_DISPLAY_ADDITIONAL_TYPE, index, 0);
+  }
+}
+
+void manageUserChangeValue(R4DisplayExpansion &r4) {
+  ChangeChValue chg;
+  if(r4.getUpdateChValue(chg)) {
+    Serial.println("C");
+    if(chg.exp_type == EXPANSION_OPTA_ANALOG) {
+      AnalogExpansion ae = OptaController.getExpansion(chg.exp_index);
+      if(ae) {
+        /* VOLTAGE DAC */
+        if(ae.isChVoltageDac(chg.exp_channel)) {
+          ae.pinVoltage(chg.exp_channel,chg.value);
+        }
+        /* CURRENT DAC */
+        else if(ae.isChCurrentDac(chg.exp_channel)) {
+          ae.pinCurrent(chg.exp_channel,chg.value);
+        }
+      }
+    }
+    else if(chg.exp_type == EXPANSION_DIGITAL_INVALID || 
+            chg.exp_type == EXPANSION_OPTA_DIGITAL_MEC ||
+            chg.exp_type == EXPANSION_OPTA_DIGITAL_STS) {
+      Serial.println("B");
+      DigitalExpansion de = OptaController.getExpansion(chg.exp_index);
+      if(de) {
+        Serial.println("A");
+        Serial.println("channel " + String(chg.exp_channel));
+        Serial.println("value " + String((PinStatus)chg.value));
+        de.digitalWrite(chg.exp_channel, (PinStatus)chg.value,true);
+      }
+    }
+
+  }
+}
+
+void manageUserChangeConfig(R4DisplayExpansion &r4) {
+  ChangeChConfig chg;
+  if(r4.getUpdateChConfig(chg)) {
+    if(chg.exp_type == EXPANSION_OPTA_ANALOG) {
+      AnalogExpansion ae = OptaController.getExpansion(chg.exp_index);
+      if(ae) {
+        
+        if(chg.config == CH_CONFIG_DAC_VOLTAGE) {
+          ae.beginChannelAsVoltageDac(chg.exp_channel);
+        }
+        else if(chg.config == CH_CONFIG_DAC_CURRENT) {
+          ae.beginChannelAsCurrentDac(chg.exp_channel);
+        }
+        else if(chg.config == CH_CONFIG_ADC_VOLTAGE) {
+          ae.beginChannelAsVoltageAdc(chg.exp_channel);
+        }
+        else if(chg.config == CH_CONFIG_ADC_CURRENT) {
+          ae.beginChannelAsCurrentAdc(chg.exp_channel);
+        }
+        else if(chg.config == CH_CONFIG_RTD_2_WIRES) {
+          ae.beginChannelAsRtd(chg.exp_channel, false, 1.2);
+        }
+        else if(chg.config == CH_CONFIG_RTD_3_WIRES) {
+          ae.beginChannelAsRtd(chg.exp_channel, true, 1.2);
+        }
+        else if(chg.config == CH_CONFIG_DIGTAL_INP) {
+          ae.beginChannelAsDigitalInput(chg.exp_channel);
+        }
+        else if(chg.config == CH_CONFIG_RTD_HIGH_IM) {
+          ae.beginChannelAsHighImpedance(chg.exp_channel);
+        }
+      }
+    }
+
+  }
+}
+
+
 /* -------------------------------------------------------------------------- */
 /*                                  LOOP                                      */
 /* -------------------------------------------------------------------------- */
@@ -551,188 +817,22 @@ void loop() {
   for(int i = 0; i < OPTA_CONTROLLER_MAX_EXPANSION_NUM; i++) {
     R4DisplayExpansion r4 = OptaController.getExpansion(i);
     if(r4) {
-       /* telling R4 how many expansion are present */
-       r4.setNumOfExpansions(OptaController.getExpansionNum());
+      /* telling R4 how many expansion are present */
+      r4.setNumOfExpansions(OptaController.getExpansionNum());
+  	  /* getting from R4 if user has selected an expansion */
+      uint8_t selected_expansion = r4.getSelectedExpansion(); 
+      /* send information to be displayed about selected expansion */
+      sendAnalogExpansionInfo2R4Display(selected_expansion,r4);
+      sendDigitalExpansionInfo2R4Display(selected_expansion,r4);
+      sendR4DisplayInfo2R4Display(selected_expansion,r4);
+      /* get if user want to change a channel value */
+      manageUserChangeValue(r4);
+      /* get if user want to change a channel value */
+      manageUserChangeConfig(r4);
 
-  	   /* getting from R4 if user has selected an expansion */
-       uint8_t selected_expansion = r4.getSelectedExpansion(); 
+      
+      delay(2000);
        
-       
-       /* handle selected expansion - if digital*/
-       DigitalExpansion de = OptaController.getExpansion(selected_expansion);
-       if(de) {
-          /* Telling r4 it has to display a digital expansion 
-            using EXPANSION_DIGITAL_INVALID as generic digital expansion type */
-          r4.setExpansionFeatures(EXPANSION_DIGITAL_INVALID, selected_expansion, 8+16);
-         
-          /* informing r4 about the channel status of digital output */
-          for(int k = 0; k < DIGITAL_OUT_NUM; k++) {
-            
-            r4.setChannelConfiguration(k, CH_TYPE_DIGITAL_OUT,
-                               (float)de.digitalOutRead(k), 
-                               CH_UNIT_DIGIT,
-                               0.0, 
-                               CH_UNIT_NO_UNIT);
-          }
-          /* informing r4 about the channel status of digital/analog input */
-          for(int k = 0; k < DIGITAL_IN_NUM; k++) {
-            
-            
-            r4.setChannelConfiguration(DIGITAL_OUT_NUM + k, CH_TYPE_DIGITAL_IN_WITH_V_ADC,
-                                       (float)de.digitalRead(k,true), 
-                                       CH_UNIT_DIGIT,
-                                       (float)de.pinVoltage(k,true), 
-                                       CH_UNIT_VOLT);
-          }
-       }
-       
-       /* handle selected expansion - if analog */
-       AnalogExpansion ae = OptaController.getExpansion(selected_expansion);
-       if(ae) {
-          r4.setExpansionFeatures(EXPANSION_OPTA_ANALOG, selected_expansion, 8+4);
-          for(int k = 0; k < OA_AN_CHANNELS_NUM; k++) {
-            /* HIGH IMPEDENCE */
-            if(ae.isChHighImpedance(k)) {
-              if(ae.isChVoltageAdc(k)) {
-                r4.setChannelConfiguration(k, CH_TYPE_HIGH_IMPEDENCE_WITH_V_ADC,
-                                       (float)0.0, 
-                                       CH_UNIT_NO_VALUE,
-                                       (float)ae.pinVoltage(k,true), 
-                                       CH_UNIT_VOLT);
-
-              }
-              else {
-                r4.setChannelConfiguration(k, CH_TYPE_HIGH_IMPEDENCE,
-                                       (float)0.0, 
-                                       CH_UNIT_NO_VALUE,
-                                       (float)0.0, 
-                                       CH_UNIT_NO_UNIT);
-              }
-            }
-            /* DIGITAL INPUT */
-            else if(ae.isChDigitalInput(k)) {
-              if(ae.isChVoltageAdc(k)) {
-                r4.setChannelConfiguration(k, CH_TYPE_DIGITAL_IN_WITH_V_ADC,
-                                       (float)ae.digitalRead(k,true),
-                                       CH_UNIT_DIGIT,
-                                       (float)ae.pinVoltage(k,true), 
-                                       CH_UNIT_VOLT);
-
-              }
-              else if(ae.isChCurrentAdc(k)) {
-                r4.setChannelConfiguration(k, CH_TYPE_DIGITAL_IN_WITH_C_ADC,
-                                       (float)ae.digitalRead(k,true),
-                                       CH_UNIT_DIGIT,
-                                       (float)ae.pinCurrent(k,true), 
-                                       CH_UNIT_mAMPERE);
-
-              }
-              else {
-                r4.setChannelConfiguration(k, CH_TYPE_DIGITAL_IN,
-                                       (float)ae.digitalRead(k,true), 
-                                       CH_UNIT_DIGIT,
-                                       (float)0.0, 
-                                       CH_UNIT_NO_UNIT);
-              }
-            }
-            /* VOLTAGE ADC */
-            else if(ae.isChVoltageAdc(k)) {
-              if(ae.isChCurrentAdc(k)) {
-                r4.setChannelConfiguration(k, CH_TYPE_V_ADC_WITH_C_ADC,
-                                       (float)ae.pinVoltage(k,true), 
-                                       CH_UNIT_VOLT,
-                                       (float)ae.pinCurrent(k,true), 
-                                       CH_UNIT_mAMPERE);
-              }
-              else {
-
-                r4.setChannelConfiguration(k, CH_TYPE_V_ADC,
-                                       (float)ae.pinVoltage(k,true), 
-                                       CH_UNIT_VOLT,
-                                       (float)0.0, 
-                                       CH_UNIT_NO_UNIT);
-              }
-            }
-            /* CURRENT ADC */
-            else if(ae.isChCurrentAdc(k)) {
-              if(ae.isChVoltageAdc(k)) {
-                r4.setChannelConfiguration(k, CH_TYPE_C_ADC_WITH_V_ADC,
-                                       (float)ae.pinCurrent(k,true), 
-                                       CH_UNIT_mAMPERE,
-                                       (float)ae.pinVoltage(k,true), 
-                                       CH_UNIT_VOLT);
-              }
-              else {
-                r4.setChannelConfiguration(k, CH_TYPE_C_ADC,
-                                       (float)ae.pinCurrent(k,true), 
-                                       CH_UNIT_mAMPERE,
-                                       (float)0.0, 
-                                       CH_UNIT_NO_UNIT);
-              }
-            }
-            /* VOLTAGE DAC */
-            else if(ae.isChVoltageDac(k)) {
-              if(ae.isChCurrentAdc(k)) {
-                r4.setChannelConfiguration(k, CH_TYPE_V_DAC_WITH_C_ADC,
-                                       (float)ae.pinVoltage(k,true), 
-                                       CH_UNIT_VOLT,
-                                       (float)ae.pinCurrent(k,true), 
-                                       CH_UNIT_mAMPERE);
-              }
-              else {
-                r4.setChannelConfiguration(k, CH_TYPE_V_DAC,
-                                       (float)ae.pinVoltage(k,true), 
-                                       CH_UNIT_VOLT,
-                                       (float)0.0, 
-                                       CH_UNIT_NO_UNIT);
-              }
-
-            }
-            /* CURRENT DAC */
-            else if(ae.isChCurrentDac(k)) {
-              if(ae.isChVoltageAdc(k)) {
-                r4.setChannelConfiguration(k, CH_TYPE_C_DAC_WITH_V_ADC,
-                                       (float)ae.pinCurrent(k,true), 
-                                       CH_UNIT_mAMPERE,
-                                       (float)ae.pinVoltage(k,true), 
-                                       CH_UNIT_VOLT);
-              }
-              else {
-                r4.setChannelConfiguration(k, CH_TYPE_RTD_2_WIRES,
-                                       (float)ae.pinCurrent(k,true), 
-                                       CH_UNIT_OHM,
-                                       (float)0.0, 
-                                       CH_UNIT_NO_UNIT);
-              }
-            }
-            /* RTD */
-            else if(ae.isChRtd(k)) {
-              r4.setChannelConfiguration(k, CH_TYPE_C_DAC,
-                                       (float)ae.getRtd(k), 
-                                       CH_UNIT_mAMPERE,
-                                       (float)0.0, 
-                                       CH_UNIT_NO_UNIT);
-
-            }
-
-            for(int k = OA_FIRST_PWM_CH; k <= OA_LAST_PWM_CH; k++) {
-              r4.setChannelConfiguration(k, CH_TYPE_PWM,
-                                       (float)ae.getPwmFreqHz(k), 
-                                       CH_UNIT_HERTZ,
-                                       (float)ae.getPwmPulsePerc(k),  
-                                       CH_UNIT_PERC);
-
-            }
-
-          }
-
-       }
-
-       /* handle selected expansion - if analog */
-       R4DisplayExpansion re = OptaController.getExpansion(selected_expansion);
-       if(re) {
-          r4.setExpansionFeatures(UNO_R4_DISPLAY_ADDITIONAL_TYPE, selected_expansion, 0);
-       }
     }
   }  
 }

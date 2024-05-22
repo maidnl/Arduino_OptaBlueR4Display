@@ -26,9 +26,6 @@
 #include <stdint.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
-#include <vector>
-
-
 
 using namespace std;
 
@@ -99,6 +96,11 @@ protected:
   volatile uint8_t i2c_ch_config_value = 0;
 
   
+  int8_t sel_ch_cfg = 0;
+  uint8_t start_ch_cfg = 0;
+  uint8_t stop_ch_cfg = 4;
+
+  
   volatile bool update_expansion_features = false;
   volatile bool reset_state_machine;
   int8_t selected_channel = 0;
@@ -125,7 +127,9 @@ protected:
   void draw_change_channel_page(uint8_t ch);
   bool display_channel_info(uint8_t ch);
   void display_new_value_channel(uint8_t ch, uint8_t index);
-  void display_change_ch_config(uint8_t ex, uint8_t ch);  
+  
+
+  void draw_change_channel_config(uint8_t ex, uint8_t ch);
 
 
   void draw_change_value_page(uint8_t ch, uint8_t special);

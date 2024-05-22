@@ -80,6 +80,18 @@ typedef uint8_t chType_t;
 typedef uint8_t chUnit_t;
 
 
+#define CH_CONFIG_DAC_VOLTAGE 0
+#define CH_CONFIG_DAC_CURRENT 1
+#define CH_CONFIG_ADC_VOLTAGE 2
+#define CH_CONFIG_ADC_CURRENT 3
+#define CH_CONFIG_RTD_2_WIRES 4
+#define CH_CONFIG_RTD_3_WIRES 5
+#define CH_CONFIG_DIGTAL_INP 6
+#define CH_CONFIG_RTD_HIGH_IM 7
+#define CH_CONFIG_NUM         8
+
+typedef uint8_t chCfg_t;
+
 #define UNO_R4_DISPLAY_ADDITIONAL_TYPE   255
 
 

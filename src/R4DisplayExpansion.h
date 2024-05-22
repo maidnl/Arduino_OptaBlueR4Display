@@ -21,6 +21,7 @@
 #include "UnoR4DisplayCommonCfg.h"
 #include <stdint.h>
 
+
 #define EXECUTE_GET_SELECTED_EXPANSION     255
 #define EXECUTE_SET_NUM_OF_EXPANSION       254
 #define EXECUTE_SET_EXPANSION_FEATURES     253
@@ -70,10 +71,12 @@ public:
                                float v2, 
                                chUnit_t u2);
 
-  /* nothing has to be changed return exp_index = 255 */
-  ChangeChValue getUpdateChValue();
-  /* nothing has to be changed return exp_index = 255 */
-  ChangeChConfig getUpdateChConfig();
+  /* if nothing has to be changed false
+     if something has to be changed it return true and the configuration */
+  bool getUpdateChValue(ChangeChValue &cfg);
+  /* if nothing has to be changed false
+     if something has to be changed it return true and the configuration */
+  bool getUpdateChConfig(ChangeChConfig &cfg);
 
 
   /* static mandatory function to be implemented by all expansions! */
@@ -82,8 +85,7 @@ public:
   static void startUp(Controller *ptr);
 
 protected:
-  //volatile ChangeChValue change_value;
-  //volatile ChangeChConfig change_config;
+  
 
 
   unsigned int i2c_transaction(uint8_t (R4DisplayExpansion::*prepare)(),

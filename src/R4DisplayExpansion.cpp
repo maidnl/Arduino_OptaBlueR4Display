@@ -71,14 +71,7 @@ uint8_t R4DisplayExpansion::msg_get_selected_expansion() {
                        Req_GET_EXP,
                        Len_GET_EXP, 
                        GET_EXP_Len);
-  /*
-  Serial.print("get selected expansion: ");
-  for(int i = 0; i < getExpectedAnsLen(GET_EXP_Len); i++) {  
-    Serial.print(ctrl->getTxBuffer()[i], HEX);
-    Serial.print(" ");
-  }
-  Serial.println();
-  */
+  
   return rv;
 
 }
@@ -95,14 +88,28 @@ uint8_t R4DisplayExpansion::msg_get_ch_change_value() {
 
 /* ________________________________________________PARSE: get change ch value */  
 bool R4DisplayExpansion::parse_get_ch_change_value() {
+  
+  
+  
+  for(int i = 0; i < getExpectedAnsLen(Ans_GET_CH_VALUE_Len); i++) {  
+    Serial.print(ctrl->getRxBuffer()[i], HEX);
+    Serial.print(" ");
+  }
+  Serial.println();
+  
   if(checkAnsGetReceived(ctrl->getRxBuffer(), 
                          Ans_GET_CH_VALUE,
                          AnsLen_GET_CH_VALUE, 
                          Ans_GET_CH_VALUE_Len)) {
+
     
-    //change_value.exp_index = ctrl->getRxBuffer()[Ans_GET_CH_VALUE_IndexPos];
-    //change_value.exp_type = ctrl->getRxBuffer()[Ans_GET_CH_VALUE_ExpTypePos];
-    //change_value.exp_channel = ctrl->getRxBuffer()[Ans_GET_CH_VALUE_ChannelPos];
+    
+    iregs[ADD_SELECTED_EXPANSION_INDEX] = ctrl->getRxBuffer()[Ans_GET_CH_VALUE_IndexPos];
+    
+    iregs[ADD_SELECTED_EXPANSION_TYPE] = ctrl->getRxBuffer()[Ans_GET_CH_VALUE_ExpTypePos];
+    
+    iregs[ADD_SELECTED_EXPANSION_CHANNEL] = ctrl->getRxBuffer()[Ans_GET_CH_VALUE_ChannelPos];
+    
 
     Float_u v;
     v.bytes[0] = ctrl->getRxBuffer()[Ans_GET_CH_VALUE_ValuePos + 0];
@@ -110,7 +117,8 @@ bool R4DisplayExpansion::parse_get_ch_change_value() {
     v.bytes[2] = ctrl->getRxBuffer()[Ans_GET_CH_VALUE_ValuePos + 2];
     v.bytes[3] = ctrl->getRxBuffer()[Ans_GET_CH_VALUE_ValuePos + 3];
 
-    //change_value.value = v.value;
+    fregs[ADD_SELECTED_EXPANSION_CHANNEL_VALUE] = v.value;
+    
 
     return true;
   }
@@ -130,15 +138,25 @@ uint8_t R4DisplayExpansion::msg_get_ch_change_config(){
 
 /* _______________________________________________PARSE: get change ch config */
 bool R4DisplayExpansion::parse_get_ch_change_config() {
+  
+  Serial.print("PARSE parse_get_ch_change_config: ");
+  for(int i = 0; i < getExpectedAnsLen(Ans_GET_CH_CONFIG_Len); i++) {  
+    Serial.print(ctrl->getRxBuffer()[i], HEX);
+    Serial.print(" ");
+  }
+  Serial.println();
+  
   if(checkAnsGetReceived(ctrl->getRxBuffer(), 
                          Ans_GET_CH_CONFIG,
                          AnsLen_GET_CH_CONFIG, 
-                         Ans_GET_CH_VALUE_Len)) {
+                         Ans_GET_CH_CONFIG_Len)) {
     
-    //change_value.exp_index = ctrl->getRxBuffer()[Ans_GET_CH_CONFIG_IndexPos];
-    //change_value.exp_type = ctrl->getRxBuffer()[Ans_GET_CH_CONFIG_ExpTypePos];
-    //change_value.exp_channel = ctrl->getRxBuffer()[Ans_GET_CH_CONFIG_ChannelPos];
-    //change_value.value = ctrl->getRxBuffer()[Ans_GET_CH_CONFIG_ConfigPos];
+    Serial.println("RICEVUTO");
+    iregs[ADD_SELECTED_EXPANSION_INDEX] = ctrl->getRxBuffer()[Ans_GET_CH_CONFIG_IndexPos];
+    iregs[ADD_SELECTED_EXPANSION_TYPE] = ctrl->getRxBuffer()[Ans_GET_CH_CONFIG_ExpTypePos];
+    iregs[ADD_SELECTED_EXPANSION_CHANNEL] = ctrl->getRxBuffer()[Ans_GET_CH_CONFIG_ChannelPos];
+    iregs[ADD_SELECTED_EXPANSION_CHANNEL_CONFIG] = ctrl->getRxBuffer()[Ans_GET_CH_CONFIG_ConfigPos];
+    Serial.println("CONFIG " +  String(iregs[ADD_SELECTED_EXPANSION_CHANNEL_CONFIG]));
 
     return true;
   }
@@ -268,32 +286,40 @@ unsigned int R4DisplayExpansion::execute(uint32_t what) {
     switch (what) {
     /* ------------------------------------------------------------------- */
     case EXECUTE_GET_SELECTED_EXPANSION:
-      
       rv = i2c_transaction(&R4DisplayExpansion::msg_get_selected_expansion,
                            &R4DisplayExpansion::parse_ans_get_selected_expansion,
                            getExpectedAnsLen(GET_EXP_AnsLen));
       break;
     /* ------------------------------------------------------------------- */
     case EXECUTE_SET_NUM_OF_EXPANSION:
-      
       rv = i2c_transaction(&R4DisplayExpansion::msg_set_num_of_expansions,
                            &R4DisplayExpansion::parse_ack,
                            getExpectedAnsLen(ACK_Len));
       break;
     /* ------------------------------------------------------------------- */
     case EXECUTE_SET_EXPANSION_FEATURES:
-      
       rv = i2c_transaction(&R4DisplayExpansion::msg_set_expansion_features,
                            &R4DisplayExpansion::parse_ack,
                            getExpectedAnsLen(ACK_Len));
       break;
     /* ------------------------------------------------------------------- */
     case EXECUTE_SET_CHANNEL_CONFIGURATION:
-     
       rv = i2c_transaction(&R4DisplayExpansion::msg_set_channel_configuration,
                            &R4DisplayExpansion::parse_ack,
                            getExpectedAnsLen(ACK_Len));
       break;
+    /* ------------------------------------------------------------------- */
+    case EXECUTE_GET_CH_VALUE:
+      rv = i2c_transaction(&R4DisplayExpansion::msg_get_ch_change_value,
+                           &R4DisplayExpansion::parse_get_ch_change_value,
+                           getExpectedAnsLen(GET_CH_VALUE_AnsLen));
+      break;  
+    /* ------------------------------------------------------------------- */
+    case EXECUTE_GET_CH_CONFIG:
+      rv = i2c_transaction(&R4DisplayExpansion::msg_get_ch_change_config,
+                           &R4DisplayExpansion::parse_get_ch_change_config,
+                           getExpectedAnsLen(GET_CH_CONFIG_AnsLen));
+      break;    
     /* ------------------------------------------------------------------- */  
     default:
       rv = Expansion::execute(what);
@@ -389,4 +415,35 @@ void R4DisplayExpansion::setChannelConfiguration(uint8_t ch,
   //Serial.println("Execute set channel configuration err = " + String(err));
 
 }
+
+/* __________________________________________________________GET UPDATE VALUE */
+  bool R4DisplayExpansion::getUpdateChValue(ChangeChValue &cfg) {
+    if(execute(EXECUTE_GET_CH_VALUE) == EXECUTE_OK) {
+      if(iregs[ADD_SELECTED_EXPANSION_INDEX] < OPTA_CONTROLLER_MAX_EXPANSION_NUM) {
+        cfg.exp_index = iregs[ADD_SELECTED_EXPANSION_INDEX];
+        cfg.exp_type = iregs[ADD_SELECTED_EXPANSION_TYPE];
+        cfg.exp_channel = iregs[ADD_SELECTED_EXPANSION_CHANNEL];
+        cfg.value = fregs[ADD_SELECTED_EXPANSION_CHANNEL_VALUE];
+
+        return true;
+      }
+    }
+
+    return false;  
+  }
+
+/*___________________________________________________________GET UPDATE CONFI */
+  bool R4DisplayExpansion::getUpdateChConfig(ChangeChConfig &cfg){
+    if(execute(EXECUTE_GET_CH_CONFIG) == EXECUTE_OK) {
+      if(iregs[ADD_SELECTED_EXPANSION_INDEX] < OPTA_CONTROLLER_MAX_EXPANSION_NUM) {
+        cfg.exp_index = iregs[ADD_SELECTED_EXPANSION_INDEX];
+        cfg.exp_type = iregs[ADD_SELECTED_EXPANSION_TYPE];
+        cfg.exp_channel = iregs[ADD_SELECTED_EXPANSION_CHANNEL];
+        cfg.config = iregs[ADD_SELECTED_EXPANSION_CHANNEL_CONFIG];
+        return true;
+      }
+    }
+    return false;  
+  }
+
 #endif

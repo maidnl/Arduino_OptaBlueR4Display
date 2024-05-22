@@ -129,7 +129,13 @@ int OptaUnoR4Display::parse_rx() {
   } else if(parse_set_num_of_expansion()) {
     debug_msg = 4;
     return msg_ack();;
-  } 
+  } else if(parse_get_ch_change_value()) {
+    debug_msg = 5;
+    return msg_get_ch_change_value();
+  } else if(parse_get_ch_change_config()) {
+    debug_msg = 6;
+    return msg_get_ch_change_config();
+  }
   else {
     debug_msg = 25;
   }
@@ -141,34 +147,16 @@ void OptaUnoR4Display::debugReceivedMsg() {
   if (debug_msg == 1) {
     Serial.println("RX: get selected expansion");
   } else if(debug_msg == 2) {
-    Serial.println("RX: set Expansion features");
-      for(int i = 0; i < getExpectedAnsLen(EXP_FEATURES_Len); i++) {
-        Serial.print(rx_buffer[i], HEX);
-        Serial.print(" ");
-      }
-    Serial.println();
-  
-    
+    Serial.println("RX: set Expansion features");  
   } else if(debug_msg == 3) {
     Serial.println("RX: set Channel configuration");
-
-      for(int i = 0; i < getExpectedAnsLen(CH_CFG_Len); i++) {
-        Serial.print(rx_buffer[i], HEX);
-        Serial.print(" ");
-      }
-    Serial.println();
-  
-    
   } else if(debug_msg == 4) {
     Serial.println("RX: set num of expansion");
-  } else if(debug_msg == 25){
-  
-  for(int i = 0; i < 10; i++) {
-    
-    Serial.print(rx_buffer[i], HEX);
-    Serial.print(" ");
-  }
-  Serial.println();
+  } else if(debug_msg == 5) {
+    Serial.println("RX: get change ch value");
+  } else if(debug_msg == 6) {
+    Serial.println("RX: get change ch config");
+  } else if(debug_msg == 25) {
   
   }
   debug_msg = 0;
@@ -383,6 +371,7 @@ uint8_t OptaUnoR4Display::msg_get_ch_change_value(){
   tx_buffer[Ans_GET_CH_VALUE_ValuePos + 1] = v.bytes[1];
   tx_buffer[Ans_GET_CH_VALUE_ValuePos + 2] = v.bytes[2];
   tx_buffer[Ans_GET_CH_VALUE_ValuePos + 3] = v.bytes[3];
+  i2c_ch_value_index = 255;
   return prepareGetAns(tx_buffer, 
                        Ans_GET_CH_VALUE,
                        AnsLen_GET_CH_VALUE, 
@@ -406,6 +395,7 @@ uint8_t OptaUnoR4Display::msg_get_ch_change_config(){
   tx_buffer[Ans_GET_CH_CONFIG_ExpTypePos] = i2c_ch_config_ex_type;
   tx_buffer[Ans_GET_CH_CONFIG_ChannelPos] = i2c_ch_config_channel;
   tx_buffer[Ans_GET_CH_CONFIG_ConfigPos] = i2c_ch_config_value;
+  i2c_ch_config_index = 255;
   return prepareGetAns(tx_buffer, 
                        Ans_GET_CH_CONFIG,
                        AnsLen_GET_CH_CONFIG, 
@@ -841,7 +831,7 @@ void OptaUnoR4Display::draw_expansion_page() {
   display.setTextSize(1);  
   display.setCursor(0,16);
 
-  Serial.println("selected row: " + String(selected_channel) + " first: " + String(first_ch_displayed) + " last: " + String(last_ch_displayed));
+  //Serial.println("selected row: " + String(selected_channel) + " first: " + String(first_ch_displayed) + " last: " + String(last_ch_displayed));
   
   while(selected_channel >= exp_channel_num) {
     selected_channel--;
@@ -862,7 +852,7 @@ void OptaUnoR4Display::draw_expansion_page() {
   int r = -1;
   uint8_t current_ch_displayed = first_ch_displayed;;
   while(current_ch_displayed < exp_channel_num) {
-    Serial.println("  current ch: " + String(current_ch_displayed));
+    //Serial.println("  current ch: " + String(current_ch_displayed));
     write_cursor_and_ch_index(current_ch_displayed, selected_channel);
     
     if(display_row_channel(current_ch_displayed, 1)) {
@@ -874,7 +864,7 @@ void OptaUnoR4Display::draw_expansion_page() {
     last_ch_displayed = current_ch_displayed;
     current_ch_displayed++;
 
-    Serial.println("  row = " + String(r));
+    //Serial.println("  row = " + String(r));
 
     if(how_many_row_take_channel(current_ch_displayed) == 0 || r + how_many_row_take_channel(current_ch_displayed) >= 5) {
       break;
@@ -1021,9 +1011,14 @@ void OptaUnoR4Display::draw_change_channel_page(uint8_t ch) {
       display.println("Change duty: down");
     }
     else {
-      display.println("right/down ch/value");
+    
+      display.println("Right:val/Down:cfg");
       display.println("Go back: left");
     }
+  }
+  else {
+    display.println("Down: change cfg");
+    display.println("Go back: left");
   }
 
   display.display();
@@ -1224,18 +1219,28 @@ void OptaUnoR4Display::draw_change_value_page(uint8_t ch, uint8_t special) {
   display.print("- Selected ch: ");
   display.println(ch);
   display.println("Up/Down change value");
-  display.print("New value: ");
+  display.setTextSize(2);
+  display.print(":> ");
   display_new_value_channel(ch,special); 
-  display.println("Right confirm");
-  display.println("Left back");
+  display.setTextSize(1);
+  display.println("Right chang/Left back");
   
-
   display.display();
 
 }
 
+/* NOTE!! This channel description MUST be kept aligned whit value in 
+   UnoR4DisplayCommonCfg.h CH_CONFIG... */
+std::string channel_functions[CH_CONFIG_NUM] = {"DAC Voltage", 
+                                 "DAC Current", 
+                                 "ADC Voltage", 
+                                 "ADC Current",
+                                 "RTD 2 wires",
+                                 "RTD 3 wires",
+                                 "Digital INP",
+                                 "HIGH IMPEDE"};
 
-void OptaUnoR4Display::display_change_ch_config(uint8_t ex, uint8_t ch) {
+void OptaUnoR4Display::draw_change_channel_config(uint8_t ex, uint8_t ch) {
   display.clearDisplay();
 
   write_expansion_page_title();
@@ -1246,7 +1251,43 @@ void OptaUnoR4Display::display_change_ch_config(uint8_t ex, uint8_t ch) {
   display.print("- Selected ch: ");
   display.println(ch);
 
+  if(sel_ch_cfg >= CH_CONFIG_NUM) {
+    sel_ch_cfg = CH_CONFIG_NUM -1;
+  }
 
+  if(sel_ch_cfg < 0) {
+    sel_ch_cfg = 0;
+  }
+
+  while(sel_ch_cfg > stop_ch_cfg) {
+    start_ch_cfg++;
+    stop_ch_cfg++;
+  }
+
+  while(sel_ch_cfg < start_ch_cfg) {
+    start_ch_cfg--;
+    stop_ch_cfg--;
+  }
+
+  if(ex == EXPANSION_OPTA_ANALOG && ch_cfg[ch].type != CH_TYPE_PWM && ch_cfg[ch].type != CH_TYPE_LED) {
+    for(int i = start_ch_cfg; i < stop_ch_cfg; i++ ) {
+      if(i == sel_ch_cfg) {
+        display.print(">");
+      } else {
+        display.print(" ");
+      }
+      display.println(channel_functions[i].c_str());
+    }
+    display.println("Left back Right select");
+  }
+  else {
+    display.println("PLEASE NOTE:");
+    display.println("This channel config");
+    display.println("cannot be changed");
+    
+  }
+
+  display.display();
 
 }
 
@@ -1267,7 +1308,11 @@ typedef enum {
   STATE_CHANGE_CHANNEL,
   STATE_CHANGE_CHANNEL_BUTTON_HANDLE,
   STATE_CHANGE_VALUE,
-  STATE_CHANGE_VALUE_BUTTON_HANDLE
+  STATE_CHANGE_VALUE_BUTTON_HANDLE,
+  STATE_SET_CHANGE_VALUE,
+  STATE_CHANGE_CONFIG,
+  STATE_CHANGE_CONFIG_BUTTON_HANDLE,
+  STATE_SET_CHANGE_CONFIG
 } displayState_t;
 
 
@@ -1390,6 +1435,7 @@ void OptaUnoR4Display::main_state_machine() {
   /* Show the status of the expansion channel                                 */  
     case STATE_SHOW_EXPANSION:
       channel_selected_to_change = 255;
+
       draw_expansion_page();
       time = millis();
       st = STATE_SHOW_EXPANSION_BUTTON_HANDLE;
@@ -1421,7 +1467,6 @@ void OptaUnoR4Display::main_state_machine() {
   /* ________________________________________________________________________ */  
   /* display status / change of single channel                                */   
     case STATE_CHANGE_CHANNEL:
-      Serial.println("CHANGE CHANNEL");
       draw_change_channel_page(channel_selected_to_change);
       st = STATE_CHANGE_CHANNEL_BUTTON_HANDLE;
     break;
@@ -1447,9 +1492,8 @@ void OptaUnoR4Display::main_state_machine() {
       st = STATE_CHANGE_VALUE;
     }
     else if(btn_pressed == EVENT_DOWN_LONG) {
-      if(exp_type == EXPANSION_OPTA_ANALOG) {
-
-      }
+      Serial.println("LONG RIGHT PRESSURE");
+      st = STATE_CHANGE_CONFIG;
       
     }
     break;
@@ -1483,15 +1527,52 @@ void OptaUnoR4Display::main_state_machine() {
       else if(btn_pressed == EVENT_LEFT_LONG) {
         st = STATE_SHOW_EXPANSION;
       }
+      else if(btn_pressed == EVENT_RIGHT_LONG) {
+        st = STATE_SET_CHANGE_VALUE;
+      }
 
       new_ch_value = (new_ch_value < min_val) ? min_val : new_ch_value;
       new_ch_value = (new_ch_value > max_val) ? max_val : new_ch_value;
 
-
-
       break;
-    
-    
+  /* ________________________________________________________________________ */
+    case STATE_SET_CHANGE_VALUE:
+      i2c_ch_value_index = exp_selected;
+      i2c_ch_value_ex_type = exp_type;
+      i2c_ch_value_channel = channel_selected_to_change;
+      i2c_ch_value_value = new_ch_value;
+      st = STATE_SHOW_EXPANSION;
+    break;
+  /* ________________________________________________________________________ */
+    case STATE_CHANGE_CONFIG:
+      draw_change_channel_config(exp_type, channel_selected_to_change);
+      st = STATE_CHANGE_CONFIG_BUTTON_HANDLE;
+    break;
+  /* ________________________________________________________________________ */  
+    case STATE_CHANGE_CONFIG_BUTTON_HANDLE:
+      if(btn_pressed == EVENT_DOWN) {
+        sel_ch_cfg++;
+        st = STATE_CHANGE_CONFIG;
+      }
+      else if(btn_pressed == EVENT_UP) {
+        sel_ch_cfg--;
+        st = STATE_CHANGE_CONFIG;
+      }
+      else if(btn_pressed == EVENT_LEFT_LONG) {
+        st = STATE_SHOW_EXPANSION;
+      }
+      else if(btn_pressed == EVENT_RIGHT_LONG) {
+        st = STATE_SET_CHANGE_CONFIG;
+      }
+    break;
+  /* ________________________________________________________________________ */  
+    case STATE_SET_CHANGE_CONFIG:
+      i2c_ch_config_index = exp_selected;
+      i2c_ch_config_ex_type = exp_type;
+      i2c_ch_config_channel = channel_selected_to_change;
+      i2c_ch_config_value = sel_ch_cfg;
+      st = STATE_SHOW_EXPANSION;
+    break;
     default:
 
     break;

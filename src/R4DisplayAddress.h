@@ -29,7 +29,15 @@
 #define ADD_CHANNEL_V2 (R4DISPLAY_EXPANSION_ADDRESS + 8)
 #define ADD_CHANNEL_U2 (R4DISPLAY_EXPANSION_ADDRESS + 9)
 
-#define ADD_CH_VALUE_EXPANSION
-#define ADD_CH_VALUE_EXPANSION_INDEX
+/* the index of the expansion the configuration the user wants to change */
+#define ADD_SELECTED_EXPANSION_INDEX  (R4DISPLAY_EXPANSION_ADDRESS + 10)
+/* the type of the expansion the configuration the user wants to change */
+#define ADD_SELECTED_EXPANSION_TYPE   (R4DISPLAY_EXPANSION_ADDRESS + 11)
+/* the channel of the expansion the user wants to change */
+#define ADD_SELECTED_EXPANSION_CHANNEL   (R4DISPLAY_EXPANSION_ADDRESS + 12)
+/* the value of the channel the user wants to change */
+#define ADD_SELECTED_EXPANSION_CHANNEL_VALUE  (R4DISPLAY_EXPANSION_ADDRESS + 13)
+/* the configuration of the channel the user wants to change */
+#define ADD_SELECTED_EXPANSION_CHANNEL_CONFIG  (R4DISPLAY_EXPANSION_ADDRESS + 14)
 
 #endif
