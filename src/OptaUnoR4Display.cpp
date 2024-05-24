@@ -17,8 +17,9 @@
  * is compiled */
 
 #ifdef ARDUINO_UNOR4_WIFI
-
-/* > Instructions: 
+/* >>>>>>>>>>>>>>>>
+ * > Instructions: 
+ * >>>>>>>>>>>>>>>>
  * CONSTRUCTOR: always call the base Module constructor specifying
  * - TwoWire Object to be used
  * - DETECT IN pin
@@ -29,10 +30,11 @@ OptaUnoR4Display::OptaUnoR4Display()
     : Module(&Wire1, DETECT_IN, DETECT_OUT), 
     btn_pressed(EVENT_NO_EVENT),
     display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET), 
-    exp_selected(255),
+    i2c_exp_selected_transmitted(255),
     i2c_num_of_exp(0) ,
-    i2c_exp_selected(255),
-    reset_state_machine(false) {
+    i2c_exp_selected_received(255),
+    reset_state_machine(false),
+    function_to_changed(CH_UNIT_NO_UNIT) {
 }
 
 /*_________________________________________________________________DESTRUCTOR */
@@ -71,30 +73,35 @@ void OptaUnoR4Display::begin() {
     Serial.println(F("SSD1306 allocation failed... looping forever"));
     for(;;); // Don't proceed, loop forever
   }
-
-         
+   
   display.clearDisplay();
   display.display();
 }
 
-
+#ifdef DEBUG_BUTTONS
 void debugButtonEvent(BtnEvent_t ev);
+#endif
 
 
 /*_________________________________________________________override: update() */
 void OptaUnoR4Display::update() {
   /* Always call base methods */
   Module::update();
+  
   BtnEvent_t ev = button_pressed();
   if (btn_pressed == EVENT_NO_EVENT) {
     btn_pressed = ev;
   }
-  //debugReceivedMsg();
+
+  #ifdef DEBUG_I2C_MESSAGES
+  debugReceivedMsg();
+  #endif
+  #ifdef DEBUG_BUTTONS
   debugButtonEvent(btn_pressed);
+  #endif
 
+  /* manage buttons and show page on the display */
   main_state_machine();
-
-
 }
 
 /* ______________________________________________________override: parse_rx() */
@@ -115,34 +122,47 @@ int OptaUnoR4Display::parse_rx() {
   rv = -1;
 
   /* PARSE SPECIFIC expansion messages */
-   
-
   if (parse_get_selected_expansion()) {
+    #ifdef DEBUG_I2C_MESSAGES
     debug_msg = 1;
+    #endif
     return msg_ans_selected_expansion();
   } else if(parse_set_expansion_features()) {
+    #ifdef DEBUG_I2C_MESSAGES
     debug_msg = 2;
+    #endif
     return msg_ack();;
   } else if(parse_set_ch_configuration()) {
+    #ifdef DEBUG_I2C_MESSAGES
     debug_msg = 3;
+    #endif
     return msg_ack();;
   } else if(parse_set_num_of_expansion()) {
+    #ifdef DEBUG_I2C_MESSAGES
     debug_msg = 4;
+    #endif
     return msg_ack();;
   } else if(parse_get_ch_change_value()) {
+    #ifdef DEBUG_I2C_MESSAGES
     debug_msg = 5;
+    #endif
     return msg_get_ch_change_value();
   } else if(parse_get_ch_change_config()) {
+    #ifdef DEBUG_I2C_MESSAGES
     debug_msg = 6;
+    #endif
     return msg_get_ch_change_config();
   }
   else {
+    #ifdef DEBUG_I2C_MESSAGES
     debug_msg = 25;
+    #endif
   }
 
   return rv;
 }
 
+#ifdef DEBUG_I2C_MESSAGES
 void OptaUnoR4Display::debugReceivedMsg() {
   if (debug_msg == 1) {
     Serial.println("RX: get selected expansion");
@@ -161,7 +181,11 @@ void OptaUnoR4Display::debugReceivedMsg() {
   }
   debug_msg = 0;
 }
-/* > Instructions: 
+#endif
+
+/* >>>>>>>>>>>>>>>>
+ * > Instructions: 
+ * >>>>>>>>>>>>>>>>
  * WRITE implementation of your own pure virtual functions */
 
 /* ____________________________________________________________get fw version */
@@ -242,6 +266,8 @@ void OptaUnoR4Display::setStatusLedHasAddress() {
 /* ########################################################################## */
 
 
+
+
 /* ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ 
                              BUTTONS FUNCTIONS
  * ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ */
@@ -285,7 +311,7 @@ BtnEvent_t OptaUnoR4Display::fire_button_event(BtnStatus_t st, int counter,
   return rv;
 }
 
-/* __________________________________BUTTONs: read the buttons phisical status */
+/* _________________________________BUTTONs: read the buttons phisical status */
 BtnEvent_t OptaUnoR4Display::button_pressed() {
   static bool event_fired = false;
   static bool long_event_fired = false;
@@ -344,7 +370,7 @@ bool OptaUnoR4Display::parse_get_selected_expansion() {
 
 /* _______________________________________PREPARE ANS: get selected expansion */
 uint8_t OptaUnoR4Display::msg_ans_selected_expansion() {
-  tx_buffer[Ans_GET_EXP_ExpPos] = exp_selected;
+  tx_buffer[Ans_GET_EXP_ExpPos] = i2c_exp_selected_transmitted;
   return prepareGetAns(tx_buffer, 
                        Ans_GET_EXP,
                        AnsLen_GET_EXP, 
@@ -362,16 +388,16 @@ bool OptaUnoR4Display::parse_get_ch_change_value() {
 
 /* __________________________________________PREPARE ANS: get change ch value */
 uint8_t OptaUnoR4Display::msg_get_ch_change_value(){
-  tx_buffer[Ans_GET_CH_VALUE_IndexPos] = i2c_ch_value_index;
-  tx_buffer[Ans_GET_CH_VALUE_ExpTypePos] = i2c_ch_value_ex_type;
-  tx_buffer[Ans_GET_CH_VALUE_ChannelPos] = i2c_ch_value_channel;
+  tx_buffer[Ans_GET_CH_VALUE_IndexPos] = i2c_change_expansion_index;
+  tx_buffer[Ans_GET_CH_VALUE_ExpTypePos] = i2c_change_expansion_type;
+  tx_buffer[Ans_GET_CH_VALUE_ChannelPos] = i2c_change_channel_index;
   Float_u v;
-  v.value = i2c_ch_value_value;
+  v.value = i2c_change_channel_value;
   tx_buffer[Ans_GET_CH_VALUE_ValuePos + 0] = v.bytes[0];
   tx_buffer[Ans_GET_CH_VALUE_ValuePos + 1] = v.bytes[1];
   tx_buffer[Ans_GET_CH_VALUE_ValuePos + 2] = v.bytes[2];
   tx_buffer[Ans_GET_CH_VALUE_ValuePos + 3] = v.bytes[3];
-  i2c_ch_value_index = 255;
+  i2c_change_expansion_index = 255;
   return prepareGetAns(tx_buffer, 
                        Ans_GET_CH_VALUE,
                        AnsLen_GET_CH_VALUE, 
@@ -391,11 +417,11 @@ bool OptaUnoR4Display::parse_get_ch_change_config(){
 
 /* _________________________________________PREPARE ANS: get change ch config */
 uint8_t OptaUnoR4Display::msg_get_ch_change_config(){
-  tx_buffer[Ans_GET_CH_CONFIG_IndexPos] = i2c_ch_config_index;
-  tx_buffer[Ans_GET_CH_CONFIG_ExpTypePos] = i2c_ch_config_ex_type;
-  tx_buffer[Ans_GET_CH_CONFIG_ChannelPos] = i2c_ch_config_channel;
-  tx_buffer[Ans_GET_CH_CONFIG_ConfigPos] = i2c_ch_config_value;
-  i2c_ch_config_index = 255;
+  tx_buffer[Ans_GET_CH_CONFIG_IndexPos] = i2c_change_expansion_index;
+  tx_buffer[Ans_GET_CH_CONFIG_ExpTypePos] = i2c_change_expansion_type;
+  tx_buffer[Ans_GET_CH_CONFIG_ChannelPos] = i2c_change_channel_index;
+  tx_buffer[Ans_GET_CH_CONFIG_ConfigPos] = i2c_change_channel_config;
+  i2c_change_expansion_index = 255;
   return prepareGetAns(tx_buffer, 
                        Ans_GET_CH_CONFIG,
                        AnsLen_GET_CH_CONFIG, 
@@ -418,10 +444,9 @@ bool OptaUnoR4Display::parse_set_expansion_features() {
                          Len_EXP_FEATURES, 
                          EXP_FEATURES_Len)) {
     
-    i2c_exp_selected = rx_buffer[EXP_FEATURES_IndexPos];
+    i2c_exp_selected_received = rx_buffer[EXP_FEATURES_IndexPos];
     i2c_exp_type = rx_buffer[EXP_FEATURES_TypePos];
     i2c_exp_channel_num = rx_buffer[EXP_FEATURES_ChNumPos];
-    
     return true;
   }
 
@@ -451,23 +476,30 @@ bool OptaUnoR4Display::parse_set_ch_configuration() {
     
     Float_u v;
     uint8_t ch = rx_buffer[CH_CFG_ChPos];
-    if(ch < MAX_CHANNEL_DISPLAYABLE) {
-      ch_cfg[ch].type = rx_buffer[CH_CFG_TypePos];
-      
+    if(ch < channels.size()) {
+
+      channels[ch].makeFunction(0, 
+                                rx_buffer[CH_CFG_Func1Pos], 
+                                rx_buffer[CH_CFG_Type1Pos], 
+                                rx_buffer[CH_CFG_U1Pos]);
+      channels[ch].makeFunction(1, 
+                                rx_buffer[CH_CFG_Func2Pos], 
+                                rx_buffer[CH_CFG_Type2Pos], 
+                                rx_buffer[CH_CFG_U2Pos]);
+
       v.bytes[0] = rx_buffer[CH_CFG_V1Pos_0];
       v.bytes[1] = rx_buffer[CH_CFG_V1Pos_1];
       v.bytes[2] = rx_buffer[CH_CFG_V1Pos_2];
       v.bytes[3] = rx_buffer[CH_CFG_V1Pos_3];
-      ch_cfg[ch].values[0] = v.value;
+
+      channels[ch].setValue(0, v.value);
+      
 
       v.bytes[0] = rx_buffer[CH_CFG_V2Pos_0];
       v.bytes[1] = rx_buffer[CH_CFG_V2Pos_1];
       v.bytes[2] = rx_buffer[CH_CFG_V2Pos_2];
       v.bytes[3] = rx_buffer[CH_CFG_V2Pos_3];
-      ch_cfg[ch].values[1] = v.value;
-
-      ch_cfg[ch].units[0] = rx_buffer[CH_CFG_U1Pos];
-      ch_cfg[ch].units[1] = rx_buffer[CH_CFG_U2Pos];
+      channels[ch].setValue(1, v.value);
     }
     return true;
   }
@@ -502,20 +534,21 @@ void OptaUnoR4Display::draw_welcome_page() {
   display.display();
 }
 
-/* _________________________________________________DRAW: wait for expansions */
+/* ____________________________________________________DRAW: wait for expansions 
+   This page is displayed if the expansion has not yet sent the number of 
+   expansion to the R4 display                                                */
 void OptaUnoR4Display::draw_wait_for_expansion_page() {
 
   display.clearDisplay();
-
-  display.setTextSize(2);             // Normal 1:1 pixel scale
-  display.setTextColor(SSD1306_WHITE);        // Draw white text
-  display.setCursor(0,0);             // Start at top-left corner
-  
+  /* TITLE of the page */
+  display.setTextSize(2);             
+  display.setTextColor(SSD1306_WHITE);        
+  display.setCursor(0,0);             
   display.print(" ..wait..");
   
+  /* "body" of the page */
   display.setTextSize(1);
   display.setCursor(0,16);
-
   display.println("Wait for controller");
   display.println("to send available");
   display.println("expansions");
@@ -523,15 +556,17 @@ void OptaUnoR4Display::draw_wait_for_expansion_page() {
   display.println("Please wait...");
 
   display.display();
-
 }
 
+/*___ _________________________________________________DRAW: wait for expansions 
+  This page is displayed in case there is a delay between the selection of the
+  expansion and the controller sending information about that expansion       */
 void OptaUnoR4Display::draw_wait_for_expansion_features() { 
 display.clearDisplay();
 
-  display.setTextSize(2);             // Normal 1:1 pixel scale
-  display.setTextColor(SSD1306_WHITE);        // Draw white text
-  display.setCursor(0,0);             // Start at top-left corner
+  display.setTextSize(2);             
+  display.setTextColor(SSD1306_WHITE);        
+  display.setCursor(0,0);             
   
   display.print(" ..wait..");
   
@@ -552,9 +587,9 @@ void OptaUnoR4Display::draw_select_expansion_menu(uint8_t n){
   display.clearDisplay();
 
   /* Expansion */
-  display.setTextSize(2);             // Normal 1:1 pixel scale
-  display.setTextColor(SSD1306_WHITE);        // Draw white text
-  display.setCursor(0,0);             // Start at top-left corner
+  display.setTextSize(2);            
+  display.setTextColor(SSD1306_WHITE);        
+  display.setCursor(0,0);
   display.println(F(" Expansion"));
   
   /* to  left arrow */
@@ -581,37 +616,21 @@ void OptaUnoR4Display::draw_select_expansion_menu(uint8_t n){
   display.display();
 }
 
-/* ___________Write the type of the expansion and the index on expansion page */
-void OptaUnoR4Display::write_expansion_page_title() {
+/* __Write the type of the expansion and the index on expansion page as title */
+void OptaUnoR4Display::display_expansion_type_as_title() {
   /* Expansion */
-  display.setTextSize(2);             // Normal 1:1 pixel scale
-  display.setTextColor(SSD1306_WHITE);        // Draw white text
-  display.setCursor(0,0);             // Start at top-left corner
+  display.setTextSize(2);             
+  display.setTextColor(SSD1306_WHITE);        
+  display.setCursor(0,0);
   
-  Serial.println("Expansion type " +  String(exp_type));
-  /* type of expansion */
-  if(exp_type == EXPANSION_DIGITAL_INVALID) {
-    display.print("Digital ");
+  if(dexp != nullptr) {
+     dexp->display(display);
   }
-  else if(exp_type == EXPANSION_OPTA_DIGITAL_MEC) {
-    display.print("Dig MEC ");
-  }
-  else if(exp_type == EXPANSION_OPTA_DIGITAL_STS) {
-    display.print("Dig STS ");
-  }
-  else if(exp_type == EXPANSION_OPTA_ANALOG) {
-    display.print("Analog ");
-  }
-  else if(exp_type == UNO_R4_DISPLAY_ADDITIONAL_TYPE) {
-    display.print("R4 Displ ");
-  }
-
-  /* number of expansion */
-  display.println(exp_selected);
 }
 
-
-void OptaUnoR4Display::write_cursor_and_ch_index(uint8_t r, uint8_t s) {
+/* Display a > indicating that that is the current selection and the number 
+   of the selection (r is the current row, s is the selected one) */
+void OptaUnoR4Display::display_cursor_selection(uint8_t r, uint8_t s) {
   if(r == s) {
       display.print(">");
   }
@@ -625,200 +644,6 @@ void OptaUnoR4Display::write_cursor_and_ch_index(uint8_t r, uint8_t s) {
   display.print(" ");
 }
 
-uint8_t OptaUnoR4Display::how_many_row_take_channel(uint8_t ch) {
-  uint8_t rv = 1;
-  if(ch < MAX_CHANNEL_DISPLAYABLE) {
-    if(ch_cfg[ch].units[1] != CH_UNIT_NO_UNIT) {
-      rv++;
-    }
-  }
-  else {
-   rv =  0;
-  }
-  return rv;
-}
-
-void OptaUnoR4Display::display_new_value_channel(uint8_t ch, uint8_t index) {
-  if(index >= 2) {
-    return;
-  }
-  if(ch_cfg[ch].units[index] == CH_UNIT_VOLT) {
-      display.print(new_ch_value,1);
-      display.println("V ");   
-  }
-  else if(ch_cfg[ch].units[index] == CH_UNIT_mVOLT) {
-    display.print(new_ch_value,1);
-    display.println("mV ");
-    
-  }
-  else if(ch_cfg[ch].units[index] == CH_UNIT_AMPERE) {
-    display.print(new_ch_value,1);
-    display.println("A ");
-    
-  }
-  else if(ch_cfg[ch].units[index] == CH_UNIT_mAMPERE) {
-    display.print(new_ch_value,1);
-    display.println("mA ");
-  }
-  else if(ch_cfg[ch].units[index] == CH_UNIT_OHM) {
-    display.print(new_ch_value,1);
-    display.println("ohm ");
-  }
-  else if(ch_cfg[ch].units[index] == CH_UNIT_DIGIT) {
-    display.print(new_ch_value,0);
-    display.println(" ");
-  }
-  else if(ch_cfg[ch].units[index] == CH_UNIT_HERTZ) {
-    display.print(new_ch_value,1);
-    display.println("Hz ");
-  }
-  else if(ch_cfg[ch].units[index] == CH_UNIT_mHERTZ) {
-    display.print(new_ch_value,1);
-    display.println("mHz ");
-  }
-  else if(ch_cfg[ch].units[index] == CH_UNIT_KHERTZ) {
-    display.print(new_ch_value,1);
-    display.println("KHz ");
-  }
-  else if(ch_cfg[ch].units[index] == CH_UNIT_MHERTZ) {
-    display.print(new_ch_value,1);
-    display.println("MHz ");
-  }
-  else if(ch_cfg[ch].units[index] == CH_UNIT_PERC) {
-    display.print(new_ch_value,1);
-    display.println("% ");
-  }
-  else if(new_ch_value == CH_UNIT_NO_VALUE) {
-    display.println(" ");
-  }
-}
-
-void OptaUnoR4Display::display_value_of_channel(uint8_t ch, uint8_t index) {
-  if(index >= 2) {
-    return;
-  }
-  if(ch_cfg[ch].units[index] == CH_UNIT_VOLT) {
-      display.print(ch_cfg[ch].values[index],1);
-      display.println("V ");   
-  }
-  else if(ch_cfg[ch].units[index] == CH_UNIT_mVOLT) {
-    display.print(ch_cfg[ch].values[index],1);
-    display.println("mV ");
-    
-  }
-  else if(ch_cfg[ch].units[index] == CH_UNIT_AMPERE) {
-    display.print(ch_cfg[ch].values[index],1);
-    display.println("A ");
-    
-  }
-  else if(ch_cfg[ch].units[index] == CH_UNIT_mAMPERE) {
-    display.print(ch_cfg[ch].values[index],1);
-    display.println("mA ");
-  }
-  else if(ch_cfg[ch].units[index] == CH_UNIT_OHM) {
-    display.print(ch_cfg[ch].values[index],1);
-    display.println("ohm ");
-  }
-  else if(ch_cfg[ch].units[index] == CH_UNIT_DIGIT) {
-    display.print(ch_cfg[ch].values[index],0);
-    display.println(" ");
-  }
-  else if(ch_cfg[ch].units[index] == CH_UNIT_HERTZ) {
-    display.print(ch_cfg[ch].values[index],1);
-    display.println("Hz ");
-  }
-  else if(ch_cfg[ch].units[index] == CH_UNIT_mHERTZ) {
-    display.print(ch_cfg[ch].values[index],1);
-    display.println("mHz ");
-  }
-  else if(ch_cfg[ch].units[index] == CH_UNIT_KHERTZ) {
-    display.print(ch_cfg[ch].values[index],1);
-    display.println("KHz ");
-  }
-  else if(ch_cfg[ch].units[index] == CH_UNIT_MHERTZ) {
-    display.print(ch_cfg[ch].values[index],1);
-    display.println("MHz ");
-  }
-  else if(ch_cfg[ch].units[index] == CH_UNIT_PERC) {
-    display.print(ch_cfg[ch].values[index],1);
-    display.println("% ");
-  }
-  else if(ch_cfg[ch].units[index] == CH_UNIT_NO_VALUE) {
-    display.println(" ");
-  }
-}
-
-
-/* write on the display the row r (1 or 2) of the channel ch 
-   return true if the row is written (consumed) */
-bool OptaUnoR4Display::display_row_channel(uint8_t ch, uint8_t r) {
-  if(ch >= MAX_CHANNEL_DISPLAYABLE) {
-    return false;
-  }
-  
-  if(r == 1) {
-
-    /* channel type  */
-    if(ch_cfg[ch].type == CH_TYPE_HIGH_IMPEDENCE ||
-       ch_cfg[ch].type == CH_TYPE_HIGH_IMPEDENCE_WITH_V_ADC) {
-      display.print("HIM  ");
-    }
-    else if(ch_cfg[ch].type == CH_TYPE_DIGITAL_IN ||
-       ch_cfg[ch].type == CH_TYPE_DIGITAL_IN_WITH_V_ADC ||
-       ch_cfg[ch].type == CH_TYPE_DIGITAL_IN_WITH_C_ADC) {
-      display.print("DIN  ");
-    }
-    else if(ch_cfg[ch].type == CH_TYPE_DIGITAL_OUT ||
-       ch_cfg[ch].type == CH_TYPE_DIGITAL_OUT_WITH_V_ADC ||
-       ch_cfg[ch].type == CH_TYPE_DIGITAL_OUT_WITH_C_ADC) {
-      display.print("DOUT ");
-    }
-    else if(ch_cfg[ch].type == CH_TYPE_V_ADC ||
-       ch_cfg[ch].type == CH_TYPE_V_ADC_WITH_C_ADC ) {
-      display.print("VADC ");
-    }
-    else if(ch_cfg[ch].type == CH_TYPE_C_ADC ||
-       ch_cfg[ch].type == CH_TYPE_C_ADC_WITH_V_ADC ) {
-      display.print("CADC ");
-    }
-    else if(ch_cfg[ch].type == CH_TYPE_PWM  ) {
-      display.print("PWM  ");
-    }
-    else if(ch_cfg[ch].type == CH_TYPE_RTD_2_WIRES ||
-       ch_cfg[ch].type == CH_TYPE_RTD_3_WIRES ) {
-      display.print("RTD  ");
-    }
-    else if(ch_cfg[ch].type == CH_TYPE_V_DAC ||
-       ch_cfg[ch].type == CH_TYPE_V_DAC_WITH_C_ADC ) {
-      display.print("VDAC ");
-    }
-    else if(ch_cfg[ch].type == CH_TYPE_C_DAC ||
-      ch_cfg[ch].type == CH_TYPE_C_DAC_WITH_V_ADC ) {
-      display.print("CDAC ");
-    }
-    else if(ch_cfg[ch].type == CH_TYPE_LED) {
-      display.print("LED  ");
-    }
-    else {
-      display.println("---- ");
-      return true;
-    }
-    display_value_of_channel(ch, 0);
-    return true;
-
-  }
-  else if(r == 2) {
-    if(ch_cfg[ch].units[1] != CH_UNIT_NO_UNIT) {
-      display.print("         ");
-      display_value_of_channel(ch, 1);
-      return true;
-    }
-
-  }
-  return false;
-}
-
-
 /* ____________________________________________ DRAW: show expansion channels */
 void OptaUnoR4Display::draw_expansion_page() {
   static uint8_t first_ch_displayed = 0;
@@ -826,14 +651,14 @@ void OptaUnoR4Display::draw_expansion_page() {
 
   display.clearDisplay();
 
-  write_expansion_page_title();
+  display_expansion_type_as_title();
 
   display.setTextSize(1);  
   display.setCursor(0,16);
 
   //Serial.println("selected row: " + String(selected_channel) + " first: " + String(first_ch_displayed) + " last: " + String(last_ch_displayed));
   
-  while(selected_channel >= exp_channel_num) {
+  while(selected_channel >= channels.size()) {
     selected_channel--;
   }
   
@@ -851,23 +676,25 @@ void OptaUnoR4Display::draw_expansion_page() {
   
   int r = -1;
   uint8_t current_ch_displayed = first_ch_displayed;;
-  while(current_ch_displayed < exp_channel_num) {
-    //Serial.println("  current ch: " + String(current_ch_displayed));
-    write_cursor_and_ch_index(current_ch_displayed, selected_channel);
+  while(current_ch_displayed < channels.size()) {
+    display_cursor_selection(current_ch_displayed, selected_channel);
     
-    if(display_row_channel(current_ch_displayed, 1)) {
-      r++;
+    if(current_ch_displayed < channels.size()) {
+      channels[current_ch_displayed].displayChannel(display);
+      r += channels[current_ch_displayed].getNumOfFunctions();
+      last_ch_displayed = current_ch_displayed;
+    }  
+    else {
+      display.println("[...wait...]");
     }
-    if(display_row_channel(current_ch_displayed, 2)) {
-      r++;
-    }
-    last_ch_displayed = current_ch_displayed;
+
     current_ch_displayed++;
 
-    //Serial.println("  row = " + String(r));
-
-    if(how_many_row_take_channel(current_ch_displayed) == 0 || r + how_many_row_take_channel(current_ch_displayed) >= 5) {
+    if(current_ch_displayed >= channels.size()) {
       break;
+    }
+    if((r + channels[current_ch_displayed].getNumOfFunctions()) >= 5) {
+        break;
     }
   }
   if(r == 3) {
@@ -879,376 +706,72 @@ void OptaUnoR4Display::draw_expansion_page() {
   
 }
 
-/* returns true if the channel is changeable */
-bool OptaUnoR4Display::display_channel_info(uint8_t ch) {
-  bool rv = false;
-  
-  if(ch_cfg[ch].type == CH_TYPE_HIGH_IMPEDENCE) {
-    display.println("+ High impedence");
-  }
-  else if(ch_cfg[ch].type == CH_TYPE_HIGH_IMPEDENCE_WITH_V_ADC) {
-    display.println("+ High impedence");
-    display.print("+ Voltage ADC: ");
-    display_value_of_channel(ch, 1);
-  }
-  else if(ch_cfg[ch].type == CH_TYPE_DIGITAL_IN) {
-    display.print("+ Digital IN: ");
-    display_value_of_channel(ch, 0);
-  }
-  else if(ch_cfg[ch].type == CH_TYPE_DIGITAL_IN_WITH_V_ADC) {
-    display.print("+ Digital IN: ");
-    display_value_of_channel(ch, 0); 
-    display.print("+ Voltage ADC: ");
-    display_value_of_channel(ch, 1);
-  }
-  else if(ch_cfg[ch].type == CH_TYPE_DIGITAL_IN_WITH_C_ADC) {
-    display.print("+ Digital IN: ");
-    display_value_of_channel(ch, 0); 
-    display.print("+ Current ADC: ");
-    display_value_of_channel(ch, 1);
-  }
-  else if(ch_cfg[ch].type == CH_TYPE_DIGITAL_OUT) {
-    display.print("+ Digital OUT: ");
-    display_value_of_channel(ch, 0); 
-    rv = true;
-  }
-  else if(ch_cfg[ch].type == CH_TYPE_DIGITAL_OUT_WITH_V_ADC) {
-    display.print("+ Digital OUT: ");
-    display_value_of_channel(ch, 0); 
-    display.print("+ Voltage ADC: ");
-    display_value_of_channel(ch, 1);
-    rv = true;
-  }
-  else if(ch_cfg[ch].type == CH_TYPE_DIGITAL_OUT_WITH_C_ADC) {
-    display.print("+ Digital OUT: ");
-    display_value_of_channel(ch, 0); 
-    display.print("+ Current ADC: ");
-    display_value_of_channel(ch, 1);
-    rv = true;
-  }
-  else if(ch_cfg[ch].type == CH_TYPE_V_ADC) {
-    display.print("+ Voltage ADC: ");
-    display_value_of_channel(ch, 0);  
-  }
-  else if(ch_cfg[ch].type == CH_TYPE_C_ADC) {
-    display.print("+ Current ADC: ");
-    display_value_of_channel(ch, 0); 
-  }
-  else if(ch_cfg[ch].type == CH_TYPE_V_ADC_WITH_C_ADC) {
-    display.print("+ Voltage ADC: ");
-    display_value_of_channel(ch, 0); 
-    display.print("+ Current ADC: ");
-    display_value_of_channel(ch, 1);
-  }
-  else if(ch_cfg[ch].type == CH_TYPE_C_ADC_WITH_V_ADC) {
-    display.print("+ Current ADC: ");
-    display_value_of_channel(ch, 0); 
-    display.print("+ Voltage ADC: ");
-    display_value_of_channel(ch, 1);
-  }
-  else if(ch_cfg[ch].type == CH_TYPE_PWM) {
-    display.print("+ PWM Freq: ");
-    display_value_of_channel(ch, 0); 
-    display.print("+ PWM Duty: ");
-    display_value_of_channel(ch, 1);
-    rv = true;
-  }
-  else if(ch_cfg[ch].type == CH_TYPE_RTD_2_WIRES) {
-    display.print("+ RTD: ");
-    display_value_of_channel(ch, 0); 
-  }
-  else if(ch_cfg[ch].type == CH_TYPE_RTD_3_WIRES) {
-    display.print("+ RTD: ");
-    display_value_of_channel(ch, 0); 
-  }
-  else if(ch_cfg[ch].type == CH_TYPE_V_DAC) {
-    display.print("+ Voltage DAC: ");
-    display_value_of_channel(ch, 0); 
-    rv = true;
-  }
-  else if(ch_cfg[ch].type == CH_TYPE_C_DAC) {
-    display.print("+ Current DAC: ");
-    display_value_of_channel(ch, 0); 
-    rv = true;
-  }
-  else if(ch_cfg[ch].type == CH_TYPE_V_DAC_WITH_C_ADC) {
-    display.print("+ Voltage DAC: ");
-    display_value_of_channel(ch, 0); 
-    display.print("+ Current ADC: ");
-    display_value_of_channel(ch, 1);  
-    rv = true;
-  }
-  else if(ch_cfg[ch].type == CH_TYPE_C_DAC_WITH_V_ADC) {
-    display.print("+ Current DAC: ");
-    display_value_of_channel(ch, 0); 
-    display.print("+ Voltage ADC: ");
-    display_value_of_channel(ch, 1);   
-    rv = true; 
-  }
-  else if(ch_cfg[ch].type == CH_TYPE_LED) {
-    display.print("+ LED, ");
-    display_value_of_channel(ch, 0);  
-    rv = true;
-  }
-  return rv;
-}
-
-
-void OptaUnoR4Display::draw_change_channel_page(uint8_t ch) {
+/* draw detailed info about selected channel and menu to tell user what can be
+   changed or configured */
+void OptaUnoR4Display::draw_info_channel_page(uint8_t ch) {
   display.clearDisplay();
 
-  write_expansion_page_title();
+  display_expansion_type_as_title();
 
   display.setTextSize(1);  
-  display.setCursor(0,18);
+  display.setCursor(0,16);
 
-  display.print("- Selected ch: ");
+  display.print("* Selected ch: ");
   display.println(ch);
 
-  if(display_channel_info(ch)) {
-    if(ch_cfg[ch].type == CH_TYPE_PWM) {
-      display.println("Change freg: up");
-      display.println("Change duty: down");
-    }
-    else {
-    
-      display.println("Right:val/Down:cfg");
-      display.println("Go back: left");
-    }
+  channels[ch].displayChannelInfo(display);
+
+  if(channels[ch].isPwm()) {
+    display.println("Up: freq/Down: duty");
   }
-  else {
-    display.println("Down: change cfg");
-    display.println("Go back: left");
+  else if(channels[ch].isChangeable() && channels[ch].isConfigurable()) {
+    display.println("Right:val/Down:cfg");
+  }
+  else if(channels[ch].isChangeable()) {
+    display.println("Right: value");
+  }
+  else if(channels[ch].isConfigurable()) {
+    display.println("Down: config");
   }
 
+  display.println("Left: back");
   display.display();
-
 }
 
-float OptaUnoR4Display::get_min_ch_value(uint8_t ex, uint8_t ch, uint8_t special) {
-  if(ch_cfg[ch].type == CH_TYPE_DIGITAL_OUT) {
-    return 0.0;
-  }
-  else if(ch_cfg[ch].type == CH_TYPE_DIGITAL_OUT_WITH_V_ADC) {
-    return 0.0;
-  }
-  else if(ch_cfg[ch].type == CH_TYPE_DIGITAL_OUT_WITH_C_ADC) {
-    return 0.0;
-  }
-  else if(ch_cfg[ch].type == CH_TYPE_PWM) {
-    if(special == SPECIAL_CH_VALUE_PWM_FREQ) {
-      return 1.0;
-    }
-    else if(special == SPECIAL_CH_VALUE_PWM_DUTY) {
-      return 0.0;
-    }
-    return 0.0;
-  }
-  else if(ch_cfg[ch].type == CH_TYPE_V_DAC) {
-    if(ex == EXPANSION_OPTA_ANALOG) {
-      return 0.0;
-    } 
-  }
-  else if(ch_cfg[ch].type == CH_TYPE_C_DAC) {
-    if(ex == EXPANSION_OPTA_ANALOG) {
-      return 0.0;
-    }
-  }
-  else if(ch_cfg[ch].type == CH_TYPE_V_DAC_WITH_C_ADC) {
-     if(ex == EXPANSION_OPTA_ANALOG) {
-      return 0.0;
-    } 
-  }
-  else if(ch_cfg[ch].type == CH_TYPE_C_DAC_WITH_V_ADC) {
-    if(ex == EXPANSION_OPTA_ANALOG) {
-      return 0.0;
-    }
-  }
-  else if(ch_cfg[ch].type == CH_TYPE_LED) {
-    return 0.0;
-  }
-  return 0.0;
-}
-
-
-
-float OptaUnoR4Display::get_max_ch_value(uint8_t ex, uint8_t ch, uint8_t special) {
-  if(ch_cfg[ch].type == CH_TYPE_DIGITAL_OUT) {
-    return 1.0;
-  }
-  else if(ch_cfg[ch].type == CH_TYPE_DIGITAL_OUT_WITH_V_ADC) {
-    return 1.0;
-  }
-  else if(ch_cfg[ch].type == CH_TYPE_DIGITAL_OUT_WITH_C_ADC) {
-    return 1.0;
-  }
-  else if(ch_cfg[ch].type == CH_TYPE_PWM) {
-    if(special == SPECIAL_CH_VALUE_PWM_FREQ) {
-      return 500.0;
-    }
-    else if(special == SPECIAL_CH_VALUE_PWM_DUTY) {
-      return 100.0;
-    }
-    return 0.0;
-  }
-  else if(ch_cfg[ch].type == CH_TYPE_V_DAC) {
-    if(ex == EXPANSION_OPTA_ANALOG) {
-      return 11.0;
-    } 
-  }
-  else if(ch_cfg[ch].type == CH_TYPE_C_DAC) {
-    if(ex == EXPANSION_OPTA_ANALOG) {
-      return 25.0;
-    }
-  }
-  else if(ch_cfg[ch].type == CH_TYPE_V_DAC_WITH_C_ADC) {
-     if(ex == EXPANSION_OPTA_ANALOG) {
-      return 11.0;
-    } 
-  }
-  else if(ch_cfg[ch].type == CH_TYPE_C_DAC_WITH_V_ADC) {
-    if(ex == EXPANSION_OPTA_ANALOG) {
-      return 25.0;
-    }
-  }
-  else if(ch_cfg[ch].type == CH_TYPE_LED) {
-    return 1.0;
-  }
-  return 0.0;
-}
-  
-float OptaUnoR4Display::get_step_ch_value(uint8_t ex, uint8_t ch, uint8_t special) {
-  if(ch_cfg[ch].type == CH_TYPE_DIGITAL_OUT) {
-    return 1.0;
-  }
-  else if(ch_cfg[ch].type == CH_TYPE_DIGITAL_OUT_WITH_V_ADC) {
-    return 1.0;
-  }
-  else if(ch_cfg[ch].type == CH_TYPE_DIGITAL_OUT_WITH_C_ADC) {
-    return 1.0;
-  }
-  else if(ch_cfg[ch].type == CH_TYPE_PWM) {
-    if(special == SPECIAL_CH_VALUE_PWM_FREQ) {
-      return 1.0;
-    }
-    else if(special == SPECIAL_CH_VALUE_PWM_DUTY) {
-      return 1.0;
-    }
-    return 0.0;
-  }
-  else if(ch_cfg[ch].type == CH_TYPE_V_DAC) {
-    if(ex == EXPANSION_OPTA_ANALOG) {
-      return 0.1;
-    } 
-  }
-  else if(ch_cfg[ch].type == CH_TYPE_C_DAC) {
-    if(ex == EXPANSION_OPTA_ANALOG) {
-      return 0.1;
-    }
-  }
-  else if(ch_cfg[ch].type == CH_TYPE_V_DAC_WITH_C_ADC) {
-     if(ex == EXPANSION_OPTA_ANALOG) {
-      return 0.1;
-    } 
-  }
-  else if(ch_cfg[ch].type == CH_TYPE_C_DAC_WITH_V_ADC) {
-    if(ex == EXPANSION_OPTA_ANALOG) {
-      return 0.1;
-    }
-  }
-  else if(ch_cfg[ch].type == CH_TYPE_LED) {
-    return 1.0;
-  }
-  return 0.0;
-
-}
-
-float OptaUnoR4Display::get_long_step_ch_value(uint8_t ex, uint8_t ch,  uint8_t special) {
-  if(ch_cfg[ch].type == CH_TYPE_DIGITAL_OUT) {
-    return 0.0;
-  }
-  else if(ch_cfg[ch].type == CH_TYPE_DIGITAL_OUT_WITH_V_ADC) {
-    return 0.0;
-  }
-  else if(ch_cfg[ch].type == CH_TYPE_DIGITAL_OUT_WITH_C_ADC) {
-    return 0.0;
-  }
-  else if(ch_cfg[ch].type == CH_TYPE_PWM) {
-    if(special == SPECIAL_CH_VALUE_PWM_FREQ) {
-      return 10.0;
-    }
-    else if(special == SPECIAL_CH_VALUE_PWM_DUTY) {
-      return 5.0;
-    }
-    return 0.0;
-  }
-  else if(ch_cfg[ch].type == CH_TYPE_V_DAC) {
-    if(ex == EXPANSION_OPTA_ANALOG) {
-      return 1.0;
-    } 
-  }
-  else if(ch_cfg[ch].type == CH_TYPE_C_DAC) {
-    if(ex == EXPANSION_OPTA_ANALOG) {
-      return 1.0;
-    }
-  }
-  else if(ch_cfg[ch].type == CH_TYPE_V_DAC_WITH_C_ADC) {
-     if(ex == EXPANSION_OPTA_ANALOG) {
-      return 1.0;
-    } 
-  }
-  else if(ch_cfg[ch].type == CH_TYPE_C_DAC_WITH_V_ADC) {
-    if(ex == EXPANSION_OPTA_ANALOG) {
-      return 1.0;
-    }
-  }
-  else if(ch_cfg[ch].type == CH_TYPE_LED) {
-    return 0.0;
-  }
-  return 0.0;
-}
-
-void OptaUnoR4Display::draw_change_value_page(uint8_t ch, uint8_t special) {
+/* __________________________________________________ DRAW: change value page */
+void OptaUnoR4Display::draw_change_value_page(uint8_t ch) {
   display.clearDisplay();
 
-  write_expansion_page_title();
+  display_expansion_type_as_title();
 
   display.setTextSize(1);  
   display.setCursor(0,18);
 
-  display.print("- Selected ch: ");
+  display.print("* Selected ch: ");
   display.println(ch);
-  display.println("Up/Down change value");
+  
   display.setTextSize(2);
-  display.print(":> ");
-  display_new_value_channel(ch,special); 
+  display.print("#: ");
+  function_to_changed.displayValue(display);
+  
   display.setTextSize(1);
-  display.println("Right chang/Left back");
+  display.println("Up/Down: change value");
+  display.println("Right:change/Left:back");
   
   display.display();
 
 }
 
-/* NOTE!! This channel description MUST be kept aligned whit value in 
-   UnoR4DisplayCommonCfg.h CH_CONFIG... */
-std::string channel_functions[CH_CONFIG_NUM] = {"DAC Voltage", 
-                                 "DAC Current", 
-                                 "ADC Voltage", 
-                                 "ADC Current",
-                                 "RTD 2 wires",
-                                 "RTD 3 wires",
-                                 "Digital INP",
-                                 "HIGH IMPEDE"};
-
-void OptaUnoR4Display::draw_change_channel_config(uint8_t ex, uint8_t ch) {
+/* _________________________________________________ DRAW: change config page */
+void OptaUnoR4Display::draw_change_channel_config(uint8_t ch) {
   display.clearDisplay();
 
-  write_expansion_page_title();
+  display_expansion_type_as_title();
 
   display.setTextSize(1);  
   display.setCursor(0,18);
 
-  display.print("- Selected ch: ");
+  display.print("* Selected ch: ");
   display.println(ch);
 
   if(sel_ch_cfg >= CH_CONFIG_NUM) {
@@ -1269,22 +792,26 @@ void OptaUnoR4Display::draw_change_channel_config(uint8_t ex, uint8_t ch) {
     stop_ch_cfg--;
   }
 
-  if(ex == EXPANSION_OPTA_ANALOG && ch_cfg[ch].type != CH_TYPE_PWM && ch_cfg[ch].type != CH_TYPE_LED) {
-    for(int i = start_ch_cfg; i < stop_ch_cfg; i++ ) {
-      if(i == sel_ch_cfg) {
-        display.print(">");
-      } else {
-        display.print(" ");
+  bool ok = false;
+
+  if(dexp != nullptr) {
+    if(dexp->isConfigurable()) {
+      if(channels[selected_channel].isConfigurable()) {
+        for(int i = start_ch_cfg; i < stop_ch_cfg; i++ ) {
+          display_cursor_selection(i, sel_ch_cfg);
+          dexp->displayConfiguration(display, i, selected_channel);
+        }
+        display.println("Left:back/Right:sel");
+        ok = true;
       }
-      display.println(channel_functions[i].c_str());
     }
-    display.println("Left back Right select");
   }
-  else {
+
+  if(!ok) {
     display.println("PLEASE NOTE:");
     display.println("This channel config");
     display.println("cannot be changed");
-    
+    display.println("Left: back");
   }
 
   display.display();
@@ -1328,24 +855,6 @@ void OptaUnoR4Display::main_state_machine() {
   static uint8_t current_expansion = 0;
   static displayState_t st = STATE_WELCOME_DRAW;
   static long long time = millis();
-  static uint8_t special = SPECIAL_CH_VALUE_NO_SPECIAL;
-
-  float min_val = 0.0;
-  float max_val = 0.0;
-  float inc_val = 0.0;
-  float long_inc_val = 0.0;
-  /*
-  for(int i = 0; i < exp_channel_num; i++) {
-    Serial.print(i);
-    Serial.print(" ");
-    Serial.print("type " + String(ch_cfg[i].type) + " ");
-    Serial.print("value1 " + String(ch_cfg[i].values[0]) + " ");
-    Serial.print("unit1 " + String(ch_cfg[i].units[0]) + " ");
-    Serial.print("value2 " + String(ch_cfg[i].values[2]) + " ");
-    Serial.println("unit2 " + String(ch_cfg[i].units[2]) );
-  }
-  */
-  //delay(1000);
 
   if(reset_state_machine) {
     current_expansion = 0;
@@ -1387,10 +896,8 @@ void OptaUnoR4Display::main_state_machine() {
      Reset the list of channel in order to be ready for the next selected expansion
      Shows the page to select an expansion  */ 
     case STATE_SELECT_EXPANSION:
-      exp_selected = 255;
-      for(int i = 0; i < MAX_CHANNEL_DISPLAYABLE; i++) {
-         ch_cfg[i].type = CH_TYPE_NO_TYPE;
-      }
+      i2c_exp_selected_transmitted = UNOR4_DISPLAY_NO_SELECTION;
+      exp_selected = UNOR4_DISPLAY_NO_SELECTION;
       draw_select_expansion_menu(current_expansion);
       st = STATE_SELECT_EXPANSION_WAIT_BUTTONS;
     break;
@@ -1410,38 +917,44 @@ void OptaUnoR4Display::main_state_machine() {
       
       current_expansion = (current_expansion == 255) ? 0 : current_expansion;
       current_expansion = (current_expansion >= i2c_num_of_exp) ? i2c_num_of_exp - 1 : current_expansion;
-      
-      /* a long press on the DOWN button trigger the change of status in STATE_WAIT_EXPANSION_FEATURES */
+      /* a long press on the DOWN button trigger the change of status in 
+         STATE_WAIT_EXPANSION_FEATURES */
       if(btn_pressed == EVENT_DOWN_LONG) {
-        exp_selected = current_expansion;
-        
+        i2c_exp_selected_transmitted = current_expansion;
         st = STATE_WAIT_EXPANSION_FEATURES;
       }
       break;
   /* ________________________________________________________________________ */
   /* wait for expansion feature message sent by the controller */
     case STATE_WAIT_EXPANSION_FEATURES:
-      exp_selected = current_expansion;
       draw_wait_for_expansion_features();
       /* as soon as the message arrives "it confirms" the expansion selected 
          so the feature are copied */
-      if(i2c_exp_selected == exp_selected) {
+      if(i2c_exp_selected_received < UNOR4_DISPLAY_NO_SELECTION &&
+         i2c_exp_selected_received == i2c_exp_selected_transmitted) {
+        
         st = STATE_SHOW_EXPANSION;
-        exp_type = i2c_exp_type;
-        exp_channel_num = i2c_exp_channel_num;
+        
+        if(dexp != nullptr) {
+          delete dexp;
+        }
+        dexp = r4display::factoryExpansion(i2c_exp_type);
+        
+        if(i2c_exp_channel_num != channels.size()) {
+          channels.resize(i2c_exp_channel_num);
+        }
+        exp_selected = i2c_exp_selected_received;
       }
       break;
   /* ________________________________________________________________________ */  
   /* Show the status of the expansion channel                                 */  
     case STATE_SHOW_EXPANSION:
-      channel_selected_to_change = 255;
-
       draw_expansion_page();
       time = millis();
       st = STATE_SHOW_EXPANSION_BUTTON_HANDLE;
     break;
   /* ________________________________________________________________________ */  
-  /* handle the button pressed when channels status are displayed              */   
+  /* handle the button pressed when channels status are displayed             */   
     case STATE_SHOW_EXPANSION_BUTTON_HANDLE:
       if(millis() - time > REFRESH_STATUS) {
           st = STATE_SHOW_EXPANSION;
@@ -1458,16 +971,13 @@ void OptaUnoR4Display::main_state_machine() {
         st = STATE_WAIT_FOR_EXPANSION;
       }
       else if(btn_pressed == EVENT_RIGHT_LONG) {
-        Serial.println("LONG RIGHT PRESSURE");
-        channel_selected_to_change = selected_channel;
-        new_ch_value = ch_cfg[channel_selected_to_change].values[0];
         st = STATE_CHANGE_CHANNEL;
       }
     break;
   /* ________________________________________________________________________ */  
   /* display status / change of single channel                                */   
     case STATE_CHANGE_CHANNEL:
-      draw_change_channel_page(channel_selected_to_change);
+      draw_info_channel_page(selected_channel);
       st = STATE_CHANGE_CHANNEL_BUTTON_HANDLE;
     break;
   /* ________________________________________________________________________ */
@@ -1476,52 +986,45 @@ void OptaUnoR4Display::main_state_machine() {
     if(btn_pressed == EVENT_LEFT_LONG) {
         st = STATE_SHOW_EXPANSION;
     }
-    else if(ch_cfg[channel_selected_to_change].type == CH_TYPE_PWM) {
+    else if(channels[selected_channel].isPwm()) {
       if(btn_pressed == EVENT_UP_LONG) {
-        special = SPECIAL_CH_VALUE_PWM_FREQ;
+        function_to_changed = channels[selected_channel].getChangeableFunction(0);
         st = STATE_CHANGE_VALUE;
-        
       }
       else if(btn_pressed == EVENT_DOWN_LONG) {
-        special = SPECIAL_CH_VALUE_PWM_DUTY;
+        function_to_changed = channels[selected_channel].getChangeableFunction(1);
         st = STATE_CHANGE_VALUE;
       }
     }
     else if(btn_pressed == EVENT_RIGHT_LONG) {
-      special = SPECIAL_CH_VALUE_NO_SPECIAL;
+      function_to_changed = channels[selected_channel].getChangeableFunction();
       st = STATE_CHANGE_VALUE;
     }
     else if(btn_pressed == EVENT_DOWN_LONG) {
-      Serial.println("LONG RIGHT PRESSURE");
       st = STATE_CHANGE_CONFIG;
-      
     }
     break;
-
+  /* ________________________________________________________________________ */
   case STATE_CHANGE_VALUE:
-    draw_change_value_page(channel_selected_to_change, special);
+    draw_change_value_page(selected_channel);
     st = STATE_CHANGE_VALUE_BUTTON_HANDLE;
     break;
   /* ________________________________________________________________________ */
     case STATE_CHANGE_VALUE_BUTTON_HANDLE:
-      min_val = get_min_ch_value(exp_type, channel_selected_to_change, special);
-      max_val = get_max_ch_value(exp_type, channel_selected_to_change, special);
-      inc_val = get_step_ch_value(exp_type, channel_selected_to_change,  special);
-      long_inc_val = get_long_step_ch_value(exp_type, channel_selected_to_change,special);
       if(btn_pressed == EVENT_DOWN) {
-        new_ch_value -= inc_val;
+        function_to_changed.decrementValue();
         st = STATE_CHANGE_VALUE;
       }
       else if(btn_pressed == EVENT_DOWN_LONG) {
-        new_ch_value -= btn_pressed;
+        function_to_changed.bigDecrementValue();
         st = STATE_CHANGE_VALUE;
       }
       else if(btn_pressed == EVENT_UP) {
-        new_ch_value += inc_val;
+        function_to_changed.incrementValue();
         st = STATE_CHANGE_VALUE;
       }
       else if(btn_pressed == EVENT_UP_LONG) {
-        new_ch_value += long_inc_val;
+        function_to_changed.bigIncrementValue();
         st = STATE_CHANGE_VALUE;
       }
       else if(btn_pressed == EVENT_LEFT_LONG) {
@@ -1530,22 +1033,19 @@ void OptaUnoR4Display::main_state_machine() {
       else if(btn_pressed == EVENT_RIGHT_LONG) {
         st = STATE_SET_CHANGE_VALUE;
       }
-
-      new_ch_value = (new_ch_value < min_val) ? min_val : new_ch_value;
-      new_ch_value = (new_ch_value > max_val) ? max_val : new_ch_value;
-
       break;
   /* ________________________________________________________________________ */
     case STATE_SET_CHANGE_VALUE:
-      i2c_ch_value_index = exp_selected;
-      i2c_ch_value_ex_type = exp_type;
-      i2c_ch_value_channel = channel_selected_to_change;
-      i2c_ch_value_value = new_ch_value;
+      i2c_change_expansion_index = i2c_exp_selected_transmitted;
+      if(dexp != nullptr) 
+        i2c_change_expansion_type = dexp->getType(); 
+      i2c_change_channel_index = selected_channel;
+      i2c_change_channel_value = function_to_changed.getValue();
       st = STATE_SHOW_EXPANSION;
     break;
   /* ________________________________________________________________________ */
     case STATE_CHANGE_CONFIG:
-      draw_change_channel_config(exp_type, channel_selected_to_change);
+      draw_change_channel_config(selected_channel);
       st = STATE_CHANGE_CONFIG_BUTTON_HANDLE;
     break;
   /* ________________________________________________________________________ */  
@@ -1567,10 +1067,11 @@ void OptaUnoR4Display::main_state_machine() {
     break;
   /* ________________________________________________________________________ */  
     case STATE_SET_CHANGE_CONFIG:
-      i2c_ch_config_index = exp_selected;
-      i2c_ch_config_ex_type = exp_type;
-      i2c_ch_config_channel = channel_selected_to_change;
-      i2c_ch_config_value = sel_ch_cfg;
+      i2c_change_expansion_index = i2c_exp_selected_transmitted;
+      if(dexp != nullptr) 
+        i2c_change_expansion_type = dexp->getType(); 
+      i2c_change_channel_index = selected_channel;
+      i2c_change_channel_config = sel_ch_cfg;
       st = STATE_SHOW_EXPANSION;
     break;
     default:

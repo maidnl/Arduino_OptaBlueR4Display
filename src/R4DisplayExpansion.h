@@ -16,6 +16,7 @@
 
 #include "OptaController.h"
 #include "OptaExpansion.h"
+#include "OptaBlue.h"
 #include "OptaUnoR4DisplayProtocol.h"
 #include "R4DisplayAddress.h"
 #include "UnoR4DisplayCommonCfg.h"
@@ -51,6 +52,11 @@ public:
 class R4DisplayExpansion : public Expansion {
 
 public:
+  static uint8_t selected_expansion;
+  static void updateDisplay();
+  static void updateExpansions();
+
+
   R4DisplayExpansion();
   ~R4DisplayExpansion();
   R4DisplayExpansion(Expansion &other);
@@ -65,9 +71,12 @@ public:
      each channel can have 2 values (for example digital input that is also
      adc */
   void setChannelConfiguration(uint8_t ch, 
-                               chType_t  type, 
+                               chFun_t f1,
+                               chType_t  t1,
                                float v1, 
                                chUnit_t u1,
+                               chFun_t f2,
+                               chType_t  t2, 
                                float v2, 
                                chUnit_t u2);
 
@@ -77,6 +86,12 @@ public:
   /* if nothing has to be changed false
      if something has to be changed it return true and the configuration */
   bool getUpdateChConfig(ChangeChConfig &cfg);
+
+
+
+
+
+
 
 
   /* static mandatory function to be implemented by all expansions! */

@@ -17,16 +17,22 @@
    attached to Opta Controller 
    The R4 display not only show information but also can be used to change
    values and configuration of other espansion
-   Please note that the Opta Controller is always the master so it has to 
-   poll periodically the R4 display to get if the user wants to change the 
-   configuration or the value of a certain channel 
+   
+   to update the R4 display only 2 calls are needed 
+   R4DisplayExpansion::updateDisplay(); -> this update the info to the display
+   R4DisplayExpansion::updateExpansions(); -> this gets changes to be transferred 
+                                              to the expansions
+
+   
    This sketch also provide a Serial interface allowing to do the same, i.e.
-   change the status or the configuration of channel expansions */
+   change the status or the configuration of channel expansions 
+   All other function in this sketch are used to provide the serial interface */
 
 
 #include "OptaBlue.h"
 #include "R4DisplayExpansion.h"
 
+/*________SERIAL INTERFACE: print the type of the expansion in a readable way */
 void printExpansionType(ExpansionType_t t) {
   if(t == EXPANSION_NOT_VALID) {
     Serial.print("Unknown!");
@@ -51,13 +57,9 @@ void printExpansionType(ExpansionType_t t) {
   }
 }
 
-
+/*______________________________SERIAL INTERFACE: print expansion information */
 void printExpansionInfo() {
-
-static unsigned long long start = millis() + 11000;
-if(millis() - start  > 5000) {
-
-  start = millis();
+  
   Serial.print("\nNumber of expansions: ");
   Serial.println(OptaController.getExpansionNum());
 
@@ -82,13 +84,43 @@ if(millis() - start  > 5000) {
       Serial.println(" Unable to get FW version");
     }
   }
-  }
+  
 }
 
+/*_______________________________SERIAL INTERFACE: get an integer from serial */
+int getIntegerFromSerial() {
+  /* basic function that get a integer from serial 
+   * (can be improved....)*/
+  
+  /* this function returns -1 if the user just hit return without entering 
+   * any number */
+  int rv = -1;
+  /* wait for user to write something on the serial line */
+  while(!Serial.available()) {
+  }
+  
+  /* get the number (everything is not a number is ignored) */
+  while(Serial.available()) {
+    
+    int num = Serial.read();
+    
+    if( (num >= 0x30 && num <= 0x39) ) {
+      if(rv == -1) {
+        rv = 0;
+      }
+      rv *= 10;
+      rv += num - 0x30;
+    }
+    else {
+      
+    }
+  }
+  
+  return rv;
+}
 
-/* -------------------------------------------------------------------------- */
+/*________________________SERIAL INTERFACE: get an integer from serial (wait) */
 int getIntegerNonBlocking() {
-/* -------------------------------------------------------------------------- */
    /* basic function that get a integer from serial 
    * (can be improved....)
    * it does not wait for input from serial and return -1 if*/
@@ -108,9 +140,12 @@ int getIntegerNonBlocking() {
   return rv;
 }
 
-/* -------------------------------------------------------------------------- */
+/*___________________________________SERIAL INTERFACE: get a char from serial */
 char getCharFromSerial() {
 /* -------------------------------------------------------------------------- */
+  /* basic function that get a char from serial 
+   * (can be improved....)*/
+
   char rv = 255;
   while(!Serial.available()) {
   }
@@ -129,7 +164,7 @@ char getCharFromSerial() {
   return rv;
 }
 
-/* -------------------------------------------------------------------------- */
+/*__________________________________SERIAL INTERFACE: get a float from serial */
 float getFloatFromSerial() {
 /* -------------------------------------------------------------------------- */
   /* basic function that get a float from serial 
@@ -185,24 +220,10 @@ void showMainMenu() {
 
 
 
-/* -------------------------------------------------------------------------- */
-/*                                 SETUP                                      */
-/* -------------------------------------------------------------------------- */
-void setup() {
-/* -------------------------------------------------------------------------- */    
-  Serial.begin(115200);
-  delay(3000);
-
-  OptaController.begin();
-  OptaController.registerCustomExpansion(R4DisplayExpansion::getProduct(),
-                                         R4DisplayExpansion::makeExpansion,
-                                         R4DisplayExpansion::startUp);
-  
-}
 
 
 
-/* -------------------------------------------------------------------------- */
+/*__________________________________________________________SERIAL INTERFACE: */
 /* given a certain Analog expansion 'device' index this function ask 
  * the user to configure the 8 channels of the analog expansion by
  * choosing from a menu */
@@ -287,40 +308,9 @@ void configureChannels(uint8_t device) {
 
 
 
-/* -------------------------------------------------------------------------- */
-int getIntegerFromSerial() {
-/* -------------------------------------------------------------------------- */
-  /* basic function that get a integer from serial 
-   * (can be improved....)*/
-  
-  /* this function returns -1 if the user just hit return without entering 
-   * any number */
-  int rv = -1;
-  /* wait for user to write something on the serial line */
-  while(!Serial.available()) {
-  }
-  
-  /* get the number (everything is not a number is ignored) */
-  while(Serial.available()) {
-    
-    int num = Serial.read();
-    
-    if( (num >= 0x30 && num <= 0x39) ) {
-      if(rv == -1) {
-        rv = 0;
-      }
-      rv *= 10;
-      rv += num - 0x30;
-    }
-    else {
-      
-    }
-  }
-  
-  return rv;
-}
-
-
+/*__________________________________________________________SERIAL INTERFACE: */
+/* given a certain Analog expansion 'device' index this function ask 
+ * the user to add an additional ADC (current or voltage) to that channel */
 /* -------------------------------------------------------------------------- */
 void addAdcToConfiguration(uint8_t device) {
 /* -------------------------------------------------------------------------- */
@@ -375,6 +365,10 @@ void addAdcToConfiguration(uint8_t device) {
      }
   }
 }
+
+/*__________________________________________________________SERIAL INTERFACE: */
+/* given a certain Analog expansion 'device' index this function ask 
+ * the user to change output values for that expansion */
 /* -------------------------------------------------------------------------- */
 void changeExpansion(uint8_t device) {
 /* -------------------------------------------------------------------------- */
@@ -489,272 +483,11 @@ void changeExpansion(uint8_t device) {
   }
 }
 
-
-void sendDigitalExpansionInfo2R4Display(uint8_t index, R4DisplayExpansion &r4) {
-  /* handle selected expansion - if digital*/
-  DigitalExpansion de = OptaController.getExpansion(index);
-  if(de) {
-    /* Telling r4 it has to display a digital expansion 
-      using EXPANSION_DIGITAL_INVALID as generic digital expansion type */
-    r4.setExpansionFeatures(EXPANSION_DIGITAL_INVALID, index, 8+16);
-   
-    /* informing r4 about the channel status of digital output */
-    for(int k = 0; k < DIGITAL_OUT_NUM; k++) {
-      
-      r4.setChannelConfiguration(k, CH_TYPE_DIGITAL_OUT,
-                         (float)de.digitalOutRead(k), 
-                         CH_UNIT_DIGIT,
-                         0.0, 
-                         CH_UNIT_NO_UNIT);
-    }
-    /* informing r4 about the channel status of digital/analog input */
-    for(int k = 0; k < DIGITAL_IN_NUM; k++) {
-      
-      
-      r4.setChannelConfiguration(DIGITAL_OUT_NUM + k, CH_TYPE_DIGITAL_IN_WITH_V_ADC,
-                                 (float)de.digitalRead(k,true), 
-                                 CH_UNIT_DIGIT,
-                                 (float)de.pinVoltage(k,true), 
-                                 CH_UNIT_VOLT);
-    }
-  }
-}
-
-void sendAnalogExpansionInfo2R4Display(uint8_t index, R4DisplayExpansion &r4) {
-  /* handle selected expansion - if analog */
-   AnalogExpansion ae = OptaController.getExpansion(index);
-   if(ae) {
-      r4.setExpansionFeatures(EXPANSION_OPTA_ANALOG, index, 8+4);
-      for(int k = 0; k < OA_AN_CHANNELS_NUM; k++) {
-        /* HIGH IMPEDENCE */
-        if(ae.isChHighImpedance(k)) {
-          if(ae.isChVoltageAdc(k)) {
-            r4.setChannelConfiguration(k, CH_TYPE_HIGH_IMPEDENCE_WITH_V_ADC,
-                                   (float)0.0, 
-                                   CH_UNIT_NO_VALUE,
-                                   (float)ae.pinVoltage(k,true), 
-                                   CH_UNIT_VOLT);
-
-          }
-          else {
-            r4.setChannelConfiguration(k, CH_TYPE_HIGH_IMPEDENCE,
-                                   (float)0.0, 
-                                   CH_UNIT_NO_VALUE,
-                                   (float)0.0, 
-                                   CH_UNIT_NO_UNIT);
-          }
-        }
-        /* DIGITAL INPUT */
-        else if(ae.isChDigitalInput(k)) {
-          if(ae.isChVoltageAdc(k)) {
-            r4.setChannelConfiguration(k, CH_TYPE_DIGITAL_IN_WITH_V_ADC,
-                                   (float)ae.digitalRead(k,true),
-                                   CH_UNIT_DIGIT,
-                                   (float)ae.pinVoltage(k,true), 
-                                   CH_UNIT_VOLT);
-
-          }
-          else if(ae.isChCurrentAdc(k)) {
-            r4.setChannelConfiguration(k, CH_TYPE_DIGITAL_IN_WITH_C_ADC,
-                                   (float)ae.digitalRead(k,true),
-                                   CH_UNIT_DIGIT,
-                                   (float)ae.pinCurrent(k,true), 
-                                   CH_UNIT_mAMPERE);
-
-          }
-          else {
-            r4.setChannelConfiguration(k, CH_TYPE_DIGITAL_IN,
-                                   (float)ae.digitalRead(k,true), 
-                                   CH_UNIT_DIGIT,
-                                   (float)0.0, 
-                                   CH_UNIT_NO_UNIT);
-          }
-        }
-        /* VOLTAGE ADC */
-        else if(ae.isChVoltageAdc(k)) {
-          if(ae.isChCurrentAdc(k)) {
-            r4.setChannelConfiguration(k, CH_TYPE_V_ADC_WITH_C_ADC,
-                                   (float)ae.pinVoltage(k,true), 
-                                   CH_UNIT_VOLT,
-                                   (float)ae.pinCurrent(k,true), 
-                                   CH_UNIT_mAMPERE);
-          }
-          else {
-
-            r4.setChannelConfiguration(k, CH_TYPE_V_ADC,
-                                   (float)ae.pinVoltage(k,true), 
-                                   CH_UNIT_VOLT,
-                                   (float)0.0, 
-                                   CH_UNIT_NO_UNIT);
-          }
-        }
-        /* CURRENT ADC */
-        else if(ae.isChCurrentAdc(k)) {
-          if(ae.isChVoltageAdc(k)) {
-            r4.setChannelConfiguration(k, CH_TYPE_C_ADC_WITH_V_ADC,
-                                   (float)ae.pinCurrent(k,true), 
-                                   CH_UNIT_mAMPERE,
-                                   (float)ae.pinVoltage(k,true), 
-                                   CH_UNIT_VOLT);
-          }
-          else {
-            r4.setChannelConfiguration(k, CH_TYPE_C_ADC,
-                                   (float)ae.pinCurrent(k,true), 
-                                   CH_UNIT_mAMPERE,
-                                   (float)0.0, 
-                                   CH_UNIT_NO_UNIT);
-          }
-        }
-        /* VOLTAGE DAC */
-        else if(ae.isChVoltageDac(k)) {
-          if(ae.isChCurrentAdc(k)) {
-            r4.setChannelConfiguration(k, CH_TYPE_V_DAC_WITH_C_ADC,
-                                   (float)ae.pinVoltage(k,true), 
-                                   CH_UNIT_VOLT,
-                                   (float)ae.pinCurrent(k,true), 
-                                   CH_UNIT_mAMPERE);
-          }
-          else {
-            r4.setChannelConfiguration(k, CH_TYPE_V_DAC,
-                                   (float)ae.pinVoltage(k,true), 
-                                   CH_UNIT_VOLT,
-                                   (float)0.0, 
-                                   CH_UNIT_NO_UNIT);
-          }
-
-        }
-        /* CURRENT DAC */
-        else if(ae.isChCurrentDac(k)) {
-          if(ae.isChVoltageAdc(k)) {
-            r4.setChannelConfiguration(k, CH_TYPE_C_DAC_WITH_V_ADC,
-                                   (float)ae.pinCurrent(k,true), 
-                                   CH_UNIT_mAMPERE,
-                                   (float)ae.pinVoltage(k,true), 
-                                   CH_UNIT_VOLT);
-          }
-          else {
-            r4.setChannelConfiguration(k, CH_TYPE_RTD_2_WIRES,
-                                   (float)ae.pinCurrent(k,true), 
-                                   CH_UNIT_OHM,
-                                   (float)0.0, 
-                                   CH_UNIT_NO_UNIT);
-          }
-        }
-        /* RTD */
-        else if(ae.isChRtd(k)) {
-          r4.setChannelConfiguration(k, CH_TYPE_C_DAC,
-                                   (float)ae.getRtd(k), 
-                                   CH_UNIT_mAMPERE,
-                                   (float)0.0, 
-                                   CH_UNIT_NO_UNIT);
-
-        }
-
-        for(int k = OA_FIRST_PWM_CH; k <= OA_LAST_PWM_CH; k++) {
-          r4.setChannelConfiguration(k, CH_TYPE_PWM,
-                                   (float)ae.getPwmFreqHz(k), 
-                                   CH_UNIT_HERTZ,
-                                   (float)ae.getPwmPulsePerc(k),  
-                                   CH_UNIT_PERC);
-
-        }
-
-      }
-
-   }
-
-  
-}
-
-void sendR4DisplayInfo2R4Display(uint8_t index, R4DisplayExpansion &r4) {
-  R4DisplayExpansion re = OptaController.getExpansion(index);
-  if(re) {
-    r4.setExpansionFeatures(UNO_R4_DISPLAY_ADDITIONAL_TYPE, index, 0);
-  }
-}
-
-void manageUserChangeValue(R4DisplayExpansion &r4) {
-  ChangeChValue chg;
-  if(r4.getUpdateChValue(chg)) {
-    Serial.println("C");
-    if(chg.exp_type == EXPANSION_OPTA_ANALOG) {
-      AnalogExpansion ae = OptaController.getExpansion(chg.exp_index);
-      if(ae) {
-        /* VOLTAGE DAC */
-        if(ae.isChVoltageDac(chg.exp_channel)) {
-          ae.pinVoltage(chg.exp_channel,chg.value);
-        }
-        /* CURRENT DAC */
-        else if(ae.isChCurrentDac(chg.exp_channel)) {
-          ae.pinCurrent(chg.exp_channel,chg.value);
-        }
-      }
-    }
-    else if(chg.exp_type == EXPANSION_DIGITAL_INVALID || 
-            chg.exp_type == EXPANSION_OPTA_DIGITAL_MEC ||
-            chg.exp_type == EXPANSION_OPTA_DIGITAL_STS) {
-      Serial.println("B");
-      DigitalExpansion de = OptaController.getExpansion(chg.exp_index);
-      if(de) {
-        Serial.println("A");
-        Serial.println("channel " + String(chg.exp_channel));
-        Serial.println("value " + String((PinStatus)chg.value));
-        de.digitalWrite(chg.exp_channel, (PinStatus)chg.value,true);
-      }
-    }
-
-  }
-}
-
-void manageUserChangeConfig(R4DisplayExpansion &r4) {
-  ChangeChConfig chg;
-  if(r4.getUpdateChConfig(chg)) {
-    if(chg.exp_type == EXPANSION_OPTA_ANALOG) {
-      AnalogExpansion ae = OptaController.getExpansion(chg.exp_index);
-      if(ae) {
-        
-        if(chg.config == CH_CONFIG_DAC_VOLTAGE) {
-          ae.beginChannelAsVoltageDac(chg.exp_channel);
-        }
-        else if(chg.config == CH_CONFIG_DAC_CURRENT) {
-          ae.beginChannelAsCurrentDac(chg.exp_channel);
-        }
-        else if(chg.config == CH_CONFIG_ADC_VOLTAGE) {
-          ae.beginChannelAsVoltageAdc(chg.exp_channel);
-        }
-        else if(chg.config == CH_CONFIG_ADC_CURRENT) {
-          ae.beginChannelAsCurrentAdc(chg.exp_channel);
-        }
-        else if(chg.config == CH_CONFIG_RTD_2_WIRES) {
-          ae.beginChannelAsRtd(chg.exp_channel, false, 1.2);
-        }
-        else if(chg.config == CH_CONFIG_RTD_3_WIRES) {
-          ae.beginChannelAsRtd(chg.exp_channel, true, 1.2);
-        }
-        else if(chg.config == CH_CONFIG_DIGTAL_INP) {
-          ae.beginChannelAsDigitalInput(chg.exp_channel);
-        }
-        else if(chg.config == CH_CONFIG_RTD_HIGH_IM) {
-          ae.beginChannelAsHighImpedance(chg.exp_channel);
-        }
-      }
-    }
-
-  }
-}
-
-
+/*__________________________________________________________SERIAL INTERFACE: */
+/* manage the user input via Serial line                                      */
 /* -------------------------------------------------------------------------- */
-/*                                  LOOP                                      */
+void serialInterface() {
 /* -------------------------------------------------------------------------- */
-void loop() {
-/* -------------------------------------------------------------------------- */    
-  OptaController.update();
-
-  /*
-   * Configuring expansion's channels and outputs with serial interface
-   */
-  
   /* init so that menu is displayed the first time */
   static int menu_command = 0;
   static uint8_t selected_expansion = 255;
@@ -806,35 +539,50 @@ void loop() {
   else if(menu_command > -1) {
     Serial.println("\nWARNING: wrong selection, unavailable option");
   }
+}
+
+
+/* -------------------------------------------------------------------------- */
+/*                                 SETUP                                      */
+/* -------------------------------------------------------------------------- */
+void setup() {
+/* -------------------------------------------------------------------------- */    
+  Serial.begin(115200);
+  delay(3000);
+
+  OptaController.begin();
+
+  /* !!!!!! Register the custom expansion !!!!!! */
+  OptaController.registerCustomExpansion(R4DisplayExpansion::getProduct(),
+                                         R4DisplayExpansion::makeExpansion,
+                                         R4DisplayExpansion::startUp);
+  
+}
+
+
+/* -------------------------------------------------------------------------- */
+/*                                  LOOP                                      */
+/* -------------------------------------------------------------------------- */
+void loop() {
+/* -------------------------------------------------------------------------- */    
+  OptaController.update();
+
+  /*
+   * Configuring expansion's channels and outputs with serial interface
+   */
+  serialInterface();
+  
   
   /*
    * Sending information to R4 display
    */
+  R4DisplayExpansion::updateDisplay();
 
-  //Serial.println("------------------------");
-  //delay(1000);
-
-  for(int i = 0; i < OPTA_CONTROLLER_MAX_EXPANSION_NUM; i++) {
-    R4DisplayExpansion r4 = OptaController.getExpansion(i);
-    if(r4) {
-      /* telling R4 how many expansion are present */
-      r4.setNumOfExpansions(OptaController.getExpansionNum());
-  	  /* getting from R4 if user has selected an expansion */
-      uint8_t selected_expansion = r4.getSelectedExpansion(); 
-      /* send information to be displayed about selected expansion */
-      sendAnalogExpansionInfo2R4Display(selected_expansion,r4);
-      sendDigitalExpansionInfo2R4Display(selected_expansion,r4);
-      sendR4DisplayInfo2R4Display(selected_expansion,r4);
-      /* get if user want to change a channel value */
-      manageUserChangeValue(r4);
-      /* get if user want to change a channel value */
-      manageUserChangeConfig(r4);
-
-      
-      delay(2000);
-       
-    }
-  }  
+  /*
+   * Getting changes from user from R4 display
+   */
+  R4DisplayExpansion::updateExpansions();
+  
 }
 
 

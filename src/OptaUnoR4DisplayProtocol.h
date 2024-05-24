@@ -49,19 +49,22 @@
 
 /* ____________________________________________COMMAND: CHANNEL CONFIGURATION */
 #define Cmd_CH_CFG               0x02
-#define Len_CH_CFG               12
+#define Len_CH_CFG               15
 #define CH_CFG_ChPos             (BP_HEADER_DIM + 0)
-#define CH_CFG_TypePos           (BP_HEADER_DIM + 1)
-#define CH_CFG_V1Pos_0           (BP_HEADER_DIM + 2) 
-#define CH_CFG_V1Pos_1           (BP_HEADER_DIM + 3) 
-#define CH_CFG_V1Pos_2           (BP_HEADER_DIM + 4) 
-#define CH_CFG_V1Pos_3           (BP_HEADER_DIM + 5) 
-#define CH_CFG_U1Pos             (BP_HEADER_DIM + 6) 
-#define CH_CFG_V2Pos_0           (BP_HEADER_DIM + 7) 
-#define CH_CFG_V2Pos_1           (BP_HEADER_DIM + 8) 
-#define CH_CFG_V2Pos_2           (BP_HEADER_DIM + 9) 
-#define CH_CFG_V2Pos_3           (BP_HEADER_DIM + 10) 
-#define CH_CFG_U2Pos             (BP_HEADER_DIM + 11) 
+#define CH_CFG_Func1Pos          (BP_HEADER_DIM + 1)
+#define CH_CFG_Type1Pos          (BP_HEADER_DIM + 2)
+#define CH_CFG_V1Pos_0           (BP_HEADER_DIM + 3) 
+#define CH_CFG_V1Pos_1           (BP_HEADER_DIM + 4) 
+#define CH_CFG_V1Pos_2           (BP_HEADER_DIM + 5) 
+#define CH_CFG_V1Pos_3           (BP_HEADER_DIM + 6) 
+#define CH_CFG_U1Pos             (BP_HEADER_DIM + 7)
+#define CH_CFG_Func2Pos          (BP_HEADER_DIM + 8) 
+#define CH_CFG_Type2Pos          (BP_HEADER_DIM + 9)
+#define CH_CFG_V2Pos_0           (BP_HEADER_DIM + 10) 
+#define CH_CFG_V2Pos_1           (BP_HEADER_DIM + 11) 
+#define CH_CFG_V2Pos_2           (BP_HEADER_DIM + 12) 
+#define CH_CFG_V2Pos_3           (BP_HEADER_DIM + 13) 
+#define CH_CFG_U2Pos             (BP_HEADER_DIM + 14) 
 #define CH_CFG_Len               (BP_HEADER_DIM + Len_CH_CFG)
 
 #define CH_CFG_AnsLen            ACK_Len

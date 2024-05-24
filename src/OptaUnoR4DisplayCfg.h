@@ -34,4 +34,8 @@
 #define LONG_EVENT_COUNTER_NUM 1000
 
 #define MAX_ROW_DISPLAYED_PER_PAGE 5
+
+//#define DEBUG_BUTTONS
+//#define DEBUG_I2C_MESSAGES
+
 #endif
