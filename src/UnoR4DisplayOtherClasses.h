@@ -163,6 +163,7 @@ public:
   void displayShortDecription(Adafruit_SSD1306 &d) override {
     d.print("HIMP ");
   }
+  void  displayValue(Adafruit_SSD1306 &d) override { (void)d; }
 };
 /* __________________________________________________ Function: DIGITAL INPUT */
 class ChFunDigitalInput : public ChFunction {
@@ -483,23 +484,31 @@ public:
    }
 
    void displayChannel(Adafruit_SSD1306 &d) {
+      
       displayShortDecription(d);
       for(int i = 0; i < MAX_FUNCTIONS_PER_CHANNEL; i++) {
-         if(i > 0) {
-            d.print("        ");
-         }
-         displayValue(i, d);
-         d.println();
+        if(funcs[i] != CH_FUNCTION_UNAVAILABLE) {
+           if(i > 0) {
+              d.print("         ");
+           }
+           displayValue(i, d);
+           d.println();
+        }
+        else if(i == 0) {
+           d.println("waiting info...");
+        }
       }
    }
 
    void displayChannelInfo(Adafruit_SSD1306 &d) {
       for(int i = 0; i < MAX_FUNCTIONS_PER_CHANNEL; i++) {
-         if(functions[i] != nullptr) {
-            functions[i]->displayDescription(d);
-         }
-         displayValue(i,d);
-         d.println();
+         
+          if(functions[i] != nullptr) {
+             functions[i]->displayDescription(d);
+          }
+          displayValue(i,d);
+          d.println();
+        
       }
    }
 

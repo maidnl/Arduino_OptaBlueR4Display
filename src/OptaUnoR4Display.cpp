@@ -624,7 +624,7 @@ void OptaUnoR4Display::display_expansion_type_as_title() {
   display.setCursor(0,0);
   
   if(dexp != nullptr) {
-     dexp->display(display);
+     dexp->display(display,exp_selected);
   }
 }
 
