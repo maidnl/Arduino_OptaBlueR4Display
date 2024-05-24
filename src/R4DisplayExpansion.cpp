@@ -475,7 +475,7 @@ static void sendDigitalExpansionInfo2R4Display(uint8_t index, R4DisplayExpansion
     /* informing r4 about the channel status of digital/analog input */
     for(int k = 0; k < DIGITAL_IN_NUM; k++) {
       
-      r4.setChannelConfiguration(k, 
+      r4.setChannelConfiguration(k + DIGITAL_OUT_NUM, 
                                  CH_FUNCTION_DIGITAL,
                                  CH_TYPE_INPUT,
                                  (float)de.digitalRead(k,true), 
