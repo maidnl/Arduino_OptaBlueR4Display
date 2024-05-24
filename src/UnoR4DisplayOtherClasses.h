@@ -502,13 +502,15 @@ public:
 
    void displayChannelInfo(Adafruit_SSD1306 &d) {
       for(int i = 0; i < MAX_FUNCTIONS_PER_CHANNEL; i++) {
-         
+        if(funcs[i] != CH_FUNCTION_UNAVAILABLE) { 
           if(functions[i] != nullptr) {
              functions[i]->displayDescription(d);
           }
+          if(funcs[i] != CH_FUNCTION_HIGH_IMPEDENCE)
+            d.print(" -> ");
           displayValue(i,d);
           d.println();
-        
+        }
       }
    }
 
