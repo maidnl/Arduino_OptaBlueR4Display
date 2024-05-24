@@ -670,7 +670,7 @@ void OptaUnoR4Display::draw_expansion_page() {
     first_ch_displayed++;
   }
 
-  if(selected_channel < first_ch_displayed) {
+  while(selected_channel < first_ch_displayed) {
     first_ch_displayed--;
   }
   
@@ -843,8 +843,7 @@ typedef enum {
 } displayState_t;
 
 
-#define WELCOME_PAGE_TIME 5000
-#define REFRESH_STATUS 1000
+
 
 
 
@@ -896,6 +895,7 @@ void OptaUnoR4Display::main_state_machine() {
      Reset the list of channel in order to be ready for the next selected expansion
      Shows the page to select an expansion  */ 
     case STATE_SELECT_EXPANSION:
+      selected_channel = 0;
       i2c_exp_selected_transmitted = UNOR4_DISPLAY_NO_SELECTION;
       exp_selected = UNOR4_DISPLAY_NO_SELECTION;
       draw_select_expansion_menu(current_expansion);
