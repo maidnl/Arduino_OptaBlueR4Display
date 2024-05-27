@@ -15,14 +15,6 @@
 
 namespace r4display {
 
-ChFunction dummyFunction{CH_UNIT_NO_UNIT};
-ChFunction Channel::getChangeableFunction(uint8_t f /*= 0*/) {
-   if(functions[f] != nullptr) {
-        return *functions[f];
-   }
-      return dummyFunction;
-}
-
 
 DisplayExpansion *factoryExpansion(uint8_t type) {
    DisplayExpansion *rv = nullptr;

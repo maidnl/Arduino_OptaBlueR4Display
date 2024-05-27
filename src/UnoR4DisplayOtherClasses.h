@@ -36,59 +36,192 @@ public:
   ChUnit() {}
   ~ChUnit() {}
   virtual void display(Adafruit_SSD1306 &d) {
+    Serial.println("-");
     (void)d;
   }
 };
 /* _____________________________________________________________________Volts */
 class ChUnitVolt : public ChUnit {
   public:
-  void display(Adafruit_SSD1306 &d) override { d.print("V");}
+  void display(Adafruit_SSD1306 &d) override { Serial.println("V"); d.print("V");}
 };
 /* ________________________________________________________________milliVolts */
 class ChUnitMilliVolt : public ChUnit {
   public:
-  void display(Adafruit_SSD1306 &d) override { d.print("mV");}
+  void display(Adafruit_SSD1306 &d) override { Serial.println("mV"); d.print("mV");}
 };
 /* ____________________________________________________________________Ampere */
 class ChUnitAmpere : public ChUnit {
   public:
-  void display(Adafruit_SSD1306 &d) override { d.print("A");}
+  void display(Adafruit_SSD1306 &d) override { Serial.println("A"); d.print("A");}
 };
 /* _______________________________________________________________milliAmpere */
 class ChUnitMilliAmpere : public ChUnit {
   public:
-  void display(Adafruit_SSD1306 &d) override { d.print("mA");}
+  void display(Adafruit_SSD1306 &d) override { Serial.println("mA"); d.print("mA");}
 };
 /* _______________________________________________________________________ohm */
 class ChUnitOhm : public ChUnit {
   public:
-  void display(Adafruit_SSD1306 &d) override { d.print("ohm");}
+  void display(Adafruit_SSD1306 &d) override { Serial.println("ohm"); d.print("ohm");}
 };
 /* _____________________________________________________________________Hertz */
 class ChUnitHetz : public ChUnit {
   public:
-  void display(Adafruit_SSD1306 &d) override { d.print("Hz");}
+  void display(Adafruit_SSD1306 &d) override { Serial.println("Hz"); d.print("Hz");}
 };
 /* _________________________________________________________________KiloHertz */
 class ChUnitKiloHetz : public ChUnit {
   public:
-  void display(Adafruit_SSD1306 &d) override { d.print("KHz");}
+  void display(Adafruit_SSD1306 &d) override { Serial.println("KHz"); d.print("KHz");}
 };
 /* _________________________________________________________________MegaHertz */
 class ChUnitMegaHetz : public ChUnit {
   public:
-  void display(Adafruit_SSD1306 &d) override { d.print("MHz");}
+  void display(Adafruit_SSD1306 &d) override {Serial.println("MHz"); d.print("MHz");}
 };
 /* ________________________________________________________________milliHertz */
 class ChUnitMilliHetz : public ChUnit{
   public:
-  void display(Adafruit_SSD1306 &d) override { d.print("mHz");}
+  void display(Adafruit_SSD1306 &d) override {Serial.println("mHz"); d.print("mHz");}
 };
 /* ___________________________________________________________________percent */
 class ChUnitPerc : public ChUnit {
   public:
-  void display(Adafruit_SSD1306 &d) override { d.print("%");}
+  void display(Adafruit_SSD1306 &d) override {Serial.println("%"); d.print("%");}
 };
+
+
+
+/* ########################################################################## */
+/*                            CLASSEs EXPANSIONs                              */ 
+/* ########################################################################## */ 
+
+class DisplayExpansion {
+private:
+  uint8_t type;
+public:
+   DisplayExpansion() {}
+   virtual ~DisplayExpansion() {}
+   virtual void display(Adafruit_SSD1306 &d) { (void)d; }
+   virtual void display(Adafruit_SSD1306 &d, uint8_t i) { (void)d; (void)i;}
+   virtual bool isConfigurable() {return false;}
+   virtual uint8_t getConfigurationNumPerChannel() {return 0;}
+
+   virtual void displayConfiguration(Adafruit_SSD1306 &d, uint8_t cfg, uint8_t ch) { 
+    (void)d; 
+    (void)cfg;
+    (void)ch;
+   }
+   uint8_t getType() {return type;}
+   void setType(uint8_t t) {type = t;}
+};
+
+class DisplayExpansionAnalog : public DisplayExpansion {
+public:
+    DisplayExpansionAnalog() {}
+    virtual ~DisplayExpansionAnalog() {}
+    void display(Adafruit_SSD1306 &d) override {
+      d.print("Analog");
+    }
+    void display(Adafruit_SSD1306 &d,uint8_t i) override {
+      d.print("Analog ");
+      d.print(i);
+    }
+
+    void displayConfiguration(Adafruit_SSD1306 &d, uint8_t cfg, uint8_t ch) override {
+      (void)ch; 
+      if(cfg < CH_CONFIG_NUM) {
+        switch(cfg) {
+        case CH_CONFIG_DAC_VOLTAGE:
+          d.print("DAC Voltage");
+        break;
+        case CH_CONFIG_DAC_CURRENT:
+          d.print("DAC Current");
+        break;
+        case CH_CONFIG_ADC_VOLTAGE:
+          d.print("ADC Voltage");
+        break;
+        case CH_CONFIG_ADC_CURRENT:
+          d.print("ADC Current");
+        break;
+        case CH_CONFIG_RTD_2_WIRES:
+          d.print("RTD 2 wires");
+        break;
+        case CH_CONFIG_RTD_3_WIRES:
+          d.print("RTD 3 wires");
+        break;
+        case CH_CONFIG_DIGTAL_INP:
+          d.print("Digital INP");
+        break;
+        case CH_CONFIG_RTD_HIGH_IM:
+          d.print("HIGH IMPEDE");
+        break;
+        default:
+
+        break;
+      
+        }
+      }
+    }
+    bool isConfigurable() override {return true;}
+};
+
+class DisplayExpansionDigital : public DisplayExpansion {
+public:
+   DisplayExpansionDigital() {}
+   virtual ~DisplayExpansionDigital() {}
+   void display(Adafruit_SSD1306 &d) override {
+      d.print("Digital");
+   }
+   void display(Adafruit_SSD1306 &d,uint8_t i) override {
+      d.print("Digital ");
+      d.print(i);
+   }
+};
+
+class DisplayExpansionDigitalMec : public DisplayExpansion {
+public:
+   DisplayExpansionDigitalMec() {}
+   virtual ~DisplayExpansionDigitalMec() {}
+   void display(Adafruit_SSD1306 &d) override {
+      d.print("Dig MEC");
+   }
+   void display(Adafruit_SSD1306 &d,uint8_t i) override {
+      d.print("Dig MEC ");
+      d.print(i);
+   }
+};
+
+class DisplayExpansionDigitalSts : public DisplayExpansion {
+public:
+   DisplayExpansionDigitalSts() {}
+   virtual ~DisplayExpansionDigitalSts() {}
+   void display(Adafruit_SSD1306 &d) override {
+      d.print("Dig STS");
+   }
+   void display(Adafruit_SSD1306 &d,uint8_t i) override {
+      d.print("Dig STS ");
+      d.print(i);
+   }
+};
+
+class DisplayR4Display : public DisplayExpansion {
+public:
+   DisplayR4Display() {}
+   virtual ~DisplayR4Display() {}
+   void display(Adafruit_SSD1306 &d) override {
+      d.print("R4 Displ");
+   }
+   void display(Adafruit_SSD1306 &d,uint8_t i) override {
+      d.print("R4 Displ ");
+      d.print(i);
+   }
+};
+
+
+DisplayExpansion *factoryExpansion(uint8_t type);
+
 
 /* ########################################################################## */
 /*                     CLASSES CHANNELS FUNCTIONS                             */ 
@@ -120,36 +253,44 @@ public:
   }
   virtual ~ChFunction() { /* shared pointer shoul distruct itself */}
   ChFunction(const ChFunction &other) {
+    Serial.println("CC ChFunction");
     value = other.value;
     unit = other.unit;
   }
 
 
   virtual float getMinValue()      {return 0.0;}
-  virtual float getMaxValue()      {return 0.0;}
+  virtual float getMaxValue()      {return 1.0;}
   virtual float getStepValue()     {return 1.0;}
   virtual float getLongStepValue() {return 10.0;}
   virtual uint8_t getDisplayPrecision() {return 1;}
-  virtual void incrementValue() {value += getStepValue(); clampValue(); }
-  virtual void decrementValue() {value -= getStepValue(); clampValue(); }
+  virtual void incrementValue() {value += getStepValue(); Serial.println("+ " + String(value)); clampValue(); }
+  virtual void decrementValue() {value -= getStepValue(); Serial.println("- " + String(value));clampValue(); }
   virtual void bigIncrementValue() {value += getLongStepValue(); clampValue();}
   virtual void bigDecrementValue() {value -= getLongStepValue(); clampValue(); }
   virtual bool isChangeable() {return false;}
   virtual void clampValue() {
+    Serial.println("p " + String(value));
     value = (value < getMinValue()) ? getMinValue() : value;
     value = (value > getMaxValue()) ? getMaxValue() : value;
+    Serial.println("d " + String(value));
   }
   virtual void setValue(float v)  {value = v;}
   virtual float getValue() {return value; }
   virtual void displayShortDecription(Adafruit_SSD1306 &d) {}
   virtual void displayDescription(Adafruit_SSD1306 &d) {}
-  virtual void  displayValue(Adafruit_SSD1306 &d) {
-    d.print(value,getDisplayPrecision());
-    d.print(" ");
+  virtual void displayUnit(Adafruit_SSD1306 &d) {
     if(unit != nullptr) {
       unit->display(d);
     }
   }
+  virtual void  displayValue(Adafruit_SSD1306 &d) {
+    d.print(value,getDisplayPrecision());
+    d.print(" ");
+    displayUnit(d);
+  }
+  
+
 };
 
 /* _________________________________________________ Function: HIGH IMPEDENCE */
@@ -192,6 +333,7 @@ public:
     d.println("Digital Output");
   }
   void  displayValue(Adafruit_SSD1306 &d) override {
+    Serial.println("Ch digital output");
     if(value == 0.0) {d.print("Off");}
     else {d.print("On");}
   }
@@ -464,6 +606,35 @@ public:
       return 0.0;
    }
 
+   void incrementValue(uint8_t i) {
+      if(i >= MAX_FUNCTIONS_PER_CHANNEL) return;
+      if(functions[i] != nullptr) {
+         functions[i]->incrementValue();
+      }
+   }
+
+   void incrementBigValue(uint8_t i) {
+      if(i >= MAX_FUNCTIONS_PER_CHANNEL) return;
+      if(functions[i] != nullptr) {
+         functions[i]->bigIncrementValue();
+      }
+   }
+
+   void decrementValue(uint8_t i) {
+      if(i >= MAX_FUNCTIONS_PER_CHANNEL) return;
+      if(functions[i] != nullptr) {
+         functions[i]->decrementValue();
+      }
+   }
+
+   void decrementBigValue(uint8_t i) {
+      if(i >= MAX_FUNCTIONS_PER_CHANNEL) return;
+      if(functions[i] != nullptr) {
+        functions[i]->bigDecrementValue();
+      }
+   }
+
+
    void displayShortDecription(Adafruit_SSD1306 &d) {
       if(functions[0] != nullptr) {
          return functions[0]->displayShortDecription(d);
@@ -483,8 +654,7 @@ public:
       }
    }
 
-   void displayChannel(Adafruit_SSD1306 &d) {
-      
+   void displayChannel(Adafruit_SSD1306 &d) {      
       displayShortDecription(d);
       for(int i = 0; i < MAX_FUNCTIONS_PER_CHANNEL; i++) {
         if(funcs[i] != CH_FUNCTION_UNAVAILABLE) {
@@ -521,136 +691,11 @@ public:
       return false;
     }
 
-    ChFunction getChangeableFunction(uint8_t f = 0);
-};
 
-/* ########################################################################## */
-/*                            CLASSEs EXPANSIONs                              */ 
-/* ########################################################################## */ 
-
-class DisplayExpansion {
-private:
-  uint8_t type;
-public:
-   DisplayExpansion() {}
-   virtual ~DisplayExpansion() {}
-   virtual void display(Adafruit_SSD1306 &d) { (void)d; }
-   virtual void display(Adafruit_SSD1306 &d, uint8_t i) { (void)d; (void)i;}
-   virtual bool isConfigurable() {return false;}
-   virtual uint8_t getConfigurationNumPerChannel() {return 0;}
-   virtual void displayConfiguration(Adafruit_SSD1306 &d, uint8_t cfg, uint8_t ch) { 
-    (void)d; 
-    (void)cfg;
-    (void)ch;
-   }
-   uint8_t getType() {return type;}
-   void setType(uint8_t t) {type = t;}
-};
-
-class DisplayExpansionAnalog : public DisplayExpansion {
-public:
-    DisplayExpansionAnalog() {}
-    virtual ~DisplayExpansionAnalog() {}
-    void display(Adafruit_SSD1306 &d) override {
-      d.print("Analog");
-    }
-    void display(Adafruit_SSD1306 &d,uint8_t i) override {
-      d.print("Analog ");
-      d.print(i);
-    }
-
-    void displayConfiguration(Adafruit_SSD1306 &d, uint8_t cfg, uint8_t ch) override {
-      (void)ch; 
-      if(cfg < CH_CONFIG_NUM) {
-        switch(cfg) {
-        case CH_CONFIG_DAC_VOLTAGE:
-          d.print("DAC Voltage");
-        break;
-        case CH_CONFIG_DAC_CURRENT:
-          d.print("DAC Current");
-        break;
-        case CH_CONFIG_ADC_VOLTAGE:
-          d.print("ADC Voltage");
-        break;
-        case CH_CONFIG_ADC_CURRENT:
-          d.print("ADC Current");
-        break;
-        case CH_CONFIG_RTD_2_WIRES:
-          d.print("RTD 2 wires");
-        break;
-        case CH_CONFIG_RTD_3_WIRES:
-          d.print("RTD 3 wires");
-        break;
-        case CH_CONFIG_DIGTAL_INP:
-          d.print("Digital INP");
-        break;
-        case CH_CONFIG_RTD_HIGH_IM:
-          d.print("HIGH IMPEDE");
-        break;
-        default:
-
-        break;
-      
-        }
-      }
-    }
-    bool isConfigurable() override {return true;}
-};
-
-class DisplayExpansionDigital : public DisplayExpansion {
-public:
-   DisplayExpansionDigital() {}
-   virtual ~DisplayExpansionDigital() {}
-   void display(Adafruit_SSD1306 &d) override {
-      d.print("Digital");
-   }
-   void display(Adafruit_SSD1306 &d,uint8_t i) override {
-      d.print("Digital ");
-      d.print(i);
-   }
-};
-
-class DisplayExpansionDigitalMec : public DisplayExpansion {
-public:
-   DisplayExpansionDigitalMec() {}
-   virtual ~DisplayExpansionDigitalMec() {}
-   void display(Adafruit_SSD1306 &d) override {
-      d.print("Dig MEC");
-   }
-   void display(Adafruit_SSD1306 &d,uint8_t i) override {
-      d.print("Dig MEC ");
-      d.print(i);
-   }
-};
-
-class DisplayExpansionDigitalSts : public DisplayExpansion {
-public:
-   DisplayExpansionDigitalSts() {}
-   virtual ~DisplayExpansionDigitalSts() {}
-   void display(Adafruit_SSD1306 &d) override {
-      d.print("Dig STS");
-   }
-   void display(Adafruit_SSD1306 &d,uint8_t i) override {
-      d.print("Dig STS ");
-      d.print(i);
-   }
-};
-
-class DisplayR4Display : public DisplayExpansion {
-public:
-   DisplayR4Display() {}
-   virtual ~DisplayR4Display() {}
-   void display(Adafruit_SSD1306 &d) override {
-      d.print("R4 Displ");
-   }
-   void display(Adafruit_SSD1306 &d,uint8_t i) override {
-      d.print("R4 Displ ");
-      d.print(i);
-   }
+    
 };
 
 
-DisplayExpansion *factoryExpansion(uint8_t type);
 
 
 } //namespace r4display

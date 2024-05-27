@@ -26,7 +26,7 @@
 #include <stdint.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
-#include <vector>
+
 
 #include "UnoR4DisplayOtherClasses.h"
 
@@ -77,10 +77,15 @@ protected:
   BtnEvent_t btn_pressed;
   Adafruit_SSD1306 display;
   
-
-  vector<r4display::Channel> channels;
+  volatile uint8_t channels_number = 0;
+  r4display::Channel channels[MAX_NUMBER_OF_CHANNELS];
   r4display::DisplayExpansion *dexp = nullptr;
-  r4display::ChFunction function_to_changed;
+  float old_channel_value_to_restore = 0.0;
+  uint8_t selected_function = 0;
+  volatile bool do_not_update_values_from_controller = false;
+
+
+  r4display::ChFunction *function_to_changed = nullptr;
   
   /* i2c_exp_selected_transmitted is sent to controller to inform it that the 
      user has selected an expansion (255 means that the user do not select 
@@ -149,6 +154,7 @@ protected:
   void draw_info_channel_page(uint8_t ch);
   void draw_change_value_page(uint8_t ch);
   void draw_change_channel_config(uint8_t ch);
+  void draw_wait_change_value(uint8_t ch);
 
   /* display_ function -> draw a certain portion of a page */
   void display_expansion_type_as_title();

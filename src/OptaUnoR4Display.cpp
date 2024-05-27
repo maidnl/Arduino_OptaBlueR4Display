@@ -34,7 +34,7 @@ OptaUnoR4Display::OptaUnoR4Display()
     i2c_num_of_exp(0) ,
     i2c_exp_selected_received(255),
     reset_state_machine(false),
-    function_to_changed(CH_UNIT_NO_UNIT) {
+    function_to_changed(nullptr) {
 }
 
 /*_________________________________________________________________DESTRUCTOR */
@@ -476,7 +476,7 @@ bool OptaUnoR4Display::parse_set_ch_configuration() {
     
     Float_u v;
     uint8_t ch = rx_buffer[CH_CFG_ChPos];
-    if(ch < channels.size()) {
+    if(ch < MAX_NUMBER_OF_CHANNELS && !do_not_update_values_from_controller) {
 
       channels[ch].makeFunction(0, 
                                 rx_buffer[CH_CFG_Func1Pos], 
@@ -557,6 +557,8 @@ void OptaUnoR4Display::draw_wait_for_expansion_page() {
 
   display.display();
 }
+
+
 
 /*___ _________________________________________________DRAW: wait for expansions 
   This page is displayed in case there is a delay between the selection of the
@@ -658,7 +660,7 @@ void OptaUnoR4Display::draw_expansion_page() {
 
   //Serial.println("selected row: " + String(selected_channel) + " first: " + String(first_ch_displayed) + " last: " + String(last_ch_displayed));
   
-  while(selected_channel >= channels.size()) {
+  while(selected_channel >= channels_number) {
     selected_channel--;
   }
   
@@ -676,10 +678,10 @@ void OptaUnoR4Display::draw_expansion_page() {
   
   int r = -1;
   uint8_t current_ch_displayed = first_ch_displayed;;
-  while(current_ch_displayed < channels.size()) {
+  while(current_ch_displayed < channels_number) {
     display_cursor_selection(current_ch_displayed, selected_channel);
     
-    if(current_ch_displayed < channels.size()) {
+    if(current_ch_displayed < channels_number) {
       channels[current_ch_displayed].displayChannel(display);
       r += channels[current_ch_displayed].getNumOfFunctions();
       last_ch_displayed = current_ch_displayed;
@@ -690,11 +692,11 @@ void OptaUnoR4Display::draw_expansion_page() {
 
     current_ch_displayed++;
 
-    if(current_ch_displayed >= channels.size()) {
+    if(current_ch_displayed >= channels_number) {
       break;
     }
     if((r + channels[current_ch_displayed].getNumOfFunctions()) >= 5) {
-        break;
+      break;
     }
   }
   if(r == 3) {
@@ -718,8 +720,9 @@ void OptaUnoR4Display::draw_info_channel_page(uint8_t ch) {
 
   display.print("* Selected ch: ");
   display.println(ch);
-
-  channels[ch].displayChannelInfo(display);
+  
+  if(ch < MAX_NUMBER_OF_CHANNELS) 
+    channels[ch].displayChannelInfo(display);
 
   if(channels[ch].isPwm()) {
     display.println("Up: freq/Down: duty");
@@ -738,6 +741,28 @@ void OptaUnoR4Display::draw_info_channel_page(uint8_t ch) {
   display.display();
 }
 
+/* draw a wait page when the user change a value, until the value is not actually
+   sent to the controller */
+void OptaUnoR4Display::draw_wait_change_value(uint8_t ch) {
+  display.clearDisplay();
+
+  display_expansion_type_as_title();
+
+  display.setTextSize(1);  
+  display.setCursor(0,16);
+
+  display.print("* Selected ch: ");
+  display.println(ch);
+
+  display.println("I am sending new");
+  display.println("value to controller");
+  display.println();
+  display.println("Please wait...");
+
+  display.display();
+
+}
+
 /* __________________________________________________ DRAW: change value page */
 void OptaUnoR4Display::draw_change_value_page(uint8_t ch) {
   display.clearDisplay();
@@ -752,11 +777,13 @@ void OptaUnoR4Display::draw_change_value_page(uint8_t ch) {
   
   display.setTextSize(2);
   display.print("#: ");
-  function_to_changed.displayValue(display);
+  if(ch < MAX_NUMBER_OF_CHANNELS) 
+    channels[ch].displayValue(selected_function,display);
+  display.println();
   
   display.setTextSize(1);
   display.println("Up/Down: change value");
-  display.println("Right:change/Left:back");
+  display.println("Right:chg/Left:back");
   
   display.display();
 
@@ -895,6 +922,7 @@ void OptaUnoR4Display::main_state_machine() {
      Reset the list of channel in order to be ready for the next selected expansion
      Shows the page to select an expansion  */ 
     case STATE_SELECT_EXPANSION:
+      
       selected_channel = 0;
       i2c_exp_selected_transmitted = UNOR4_DISPLAY_NO_SELECTION;
       exp_selected = UNOR4_DISPLAY_NO_SELECTION;
@@ -939,10 +967,7 @@ void OptaUnoR4Display::main_state_machine() {
           delete dexp;
         }
         dexp = r4display::factoryExpansion(i2c_exp_type);
-        
-        if(i2c_exp_channel_num != channels.size()) {
-          channels.resize(i2c_exp_channel_num);
-        }
+        channels_number = i2c_exp_channel_num;
         exp_selected = i2c_exp_selected_received;
       }
       break;
@@ -956,6 +981,7 @@ void OptaUnoR4Display::main_state_machine() {
   /* ________________________________________________________________________ */  
   /* handle the button pressed when channels status are displayed             */   
     case STATE_SHOW_EXPANSION_BUTTON_HANDLE:
+      
       if(millis() - time > REFRESH_STATUS) {
           st = STATE_SHOW_EXPANSION;
       }
@@ -988,16 +1014,19 @@ void OptaUnoR4Display::main_state_machine() {
     }
     else if(channels[selected_channel].isPwm()) {
       if(btn_pressed == EVENT_UP_LONG) {
-        function_to_changed = channels[selected_channel].getChangeableFunction(0);
+        selected_function = 0;
+        old_channel_value_to_restore = channels[selected_channel].getValue(0);
         st = STATE_CHANGE_VALUE;
       }
       else if(btn_pressed == EVENT_DOWN_LONG) {
-        function_to_changed = channels[selected_channel].getChangeableFunction(1);
+        selected_function = 1;
+        old_channel_value_to_restore = channels[selected_channel].getValue(1);
         st = STATE_CHANGE_VALUE;
       }
     }
     else if(btn_pressed == EVENT_RIGHT_LONG) {
-      function_to_changed = channels[selected_channel].getChangeableFunction();
+      selected_function = 0;
+      old_channel_value_to_restore = channels[selected_channel].getValue(0);
       st = STATE_CHANGE_VALUE;
     }
     else if(btn_pressed == EVENT_DOWN_LONG) {
@@ -1006,28 +1035,30 @@ void OptaUnoR4Display::main_state_machine() {
     break;
   /* ________________________________________________________________________ */
   case STATE_CHANGE_VALUE:
+    do_not_update_values_from_controller = true;
     draw_change_value_page(selected_channel);
     st = STATE_CHANGE_VALUE_BUTTON_HANDLE;
     break;
   /* ________________________________________________________________________ */
     case STATE_CHANGE_VALUE_BUTTON_HANDLE:
       if(btn_pressed == EVENT_DOWN) {
-        function_to_changed.decrementValue();
+        channels[selected_channel].decrementValue(selected_function);
         st = STATE_CHANGE_VALUE;
       }
       else if(btn_pressed == EVENT_DOWN_LONG) {
-        function_to_changed.bigDecrementValue();
+        channels[selected_channel].decrementBigValue(selected_function);
         st = STATE_CHANGE_VALUE;
       }
       else if(btn_pressed == EVENT_UP) {
-        function_to_changed.incrementValue();
+        channels[selected_channel].incrementValue(selected_function);
         st = STATE_CHANGE_VALUE;
       }
       else if(btn_pressed == EVENT_UP_LONG) {
-        function_to_changed.bigIncrementValue();
+        channels[selected_channel].incrementBigValue(selected_function);
         st = STATE_CHANGE_VALUE;
       }
       else if(btn_pressed == EVENT_LEFT_LONG) {
+        channels[selected_channel].setValue(selected_function,old_channel_value_to_restore);
         st = STATE_SHOW_EXPANSION;
       }
       else if(btn_pressed == EVENT_RIGHT_LONG) {
@@ -1040,7 +1071,11 @@ void OptaUnoR4Display::main_state_machine() {
       if(dexp != nullptr) 
         i2c_change_expansion_type = dexp->getType(); 
       i2c_change_channel_index = selected_channel;
-      i2c_change_channel_value = function_to_changed.getValue();
+      i2c_change_channel_value = channels[selected_channel].getValue(selected_function);
+      draw_wait_change_value(selected_channel);
+      while(i2c_change_expansion_index != 255) {
+
+      }
       st = STATE_SHOW_EXPANSION;
     break;
   /* ________________________________________________________________________ */
