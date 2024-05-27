@@ -36,59 +36,59 @@ public:
   ChUnit() {}
   ~ChUnit() {}
   virtual void display(Adafruit_SSD1306 &d) {
-    Serial.println("-");
+    
     (void)d;
   }
 };
 /* _____________________________________________________________________Volts */
 class ChUnitVolt : public ChUnit {
   public:
-  void display(Adafruit_SSD1306 &d) override { Serial.println("V"); d.print("V");}
+  void display(Adafruit_SSD1306 &d) override {  d.print("V");}
 };
 /* ________________________________________________________________milliVolts */
 class ChUnitMilliVolt : public ChUnit {
   public:
-  void display(Adafruit_SSD1306 &d) override { Serial.println("mV"); d.print("mV");}
+  void display(Adafruit_SSD1306 &d) override {  d.print("mV");}
 };
 /* ____________________________________________________________________Ampere */
 class ChUnitAmpere : public ChUnit {
   public:
-  void display(Adafruit_SSD1306 &d) override { Serial.println("A"); d.print("A");}
+  void display(Adafruit_SSD1306 &d) override {  d.print("A");}
 };
 /* _______________________________________________________________milliAmpere */
 class ChUnitMilliAmpere : public ChUnit {
   public:
-  void display(Adafruit_SSD1306 &d) override { Serial.println("mA"); d.print("mA");}
+  void display(Adafruit_SSD1306 &d) override {  d.print("mA");}
 };
 /* _______________________________________________________________________ohm */
 class ChUnitOhm : public ChUnit {
   public:
-  void display(Adafruit_SSD1306 &d) override { Serial.println("ohm"); d.print("ohm");}
+  void display(Adafruit_SSD1306 &d) override {  d.print("ohm");}
 };
 /* _____________________________________________________________________Hertz */
 class ChUnitHetz : public ChUnit {
   public:
-  void display(Adafruit_SSD1306 &d) override { Serial.println("Hz"); d.print("Hz");}
+  void display(Adafruit_SSD1306 &d) override {  d.print("Hz");}
 };
 /* _________________________________________________________________KiloHertz */
 class ChUnitKiloHetz : public ChUnit {
   public:
-  void display(Adafruit_SSD1306 &d) override { Serial.println("KHz"); d.print("KHz");}
+  void display(Adafruit_SSD1306 &d) override { d.print("KHz");}
 };
 /* _________________________________________________________________MegaHertz */
 class ChUnitMegaHetz : public ChUnit {
   public:
-  void display(Adafruit_SSD1306 &d) override {Serial.println("MHz"); d.print("MHz");}
+  void display(Adafruit_SSD1306 &d) override { d.print("MHz");}
 };
 /* ________________________________________________________________milliHertz */
 class ChUnitMilliHetz : public ChUnit{
   public:
-  void display(Adafruit_SSD1306 &d) override {Serial.println("mHz"); d.print("mHz");}
+  void display(Adafruit_SSD1306 &d) override { d.print("mHz");}
 };
 /* ___________________________________________________________________percent */
 class ChUnitPerc : public ChUnit {
   public:
-  void display(Adafruit_SSD1306 &d) override {Serial.println("%"); d.print("%");}
+  void display(Adafruit_SSD1306 &d) override { d.print("%");}
 };
 
 
@@ -105,8 +105,18 @@ public:
    virtual ~DisplayExpansion() {}
    virtual void display(Adafruit_SSD1306 &d) { (void)d; }
    virtual void display(Adafruit_SSD1306 &d, uint8_t i) { (void)d; (void)i;}
-   virtual bool isConfigurable() {return false;}
+   virtual bool isConfigurable(uint8_t ch) {return false;}
    virtual uint8_t getConfigurationNumPerChannel() {return 0;}
+   virtual float getMinDigitalValue() { return 0.0; }
+   virtual float getMaxDigitalValue() { return 1.0; }
+   virtual float getMinVoltageAdcValue() { return 0.0; }
+   virtual float getMaxVoltageAdcValue() { return 10.0; } 
+   virtual float getMinCurrentAdcValue() { return 0.0; }
+   virtual float getMaxCurrentAdcValue() { return 25.0; } 
+   virtual float getMinVoltageDacValue() { return 0.0; }
+   virtual float getMaxVoltageDacValue() { return 11.0; } 
+   virtual float getMinCurrentDacValue() { return 0.0; }
+   virtual float getMaxCurrentDacValue() { return 25.0; } 
 
    virtual void displayConfiguration(Adafruit_SSD1306 &d, uint8_t cfg, uint8_t ch) { 
     (void)d; 
@@ -164,7 +174,12 @@ public:
         }
       }
     }
-    bool isConfigurable() override {return true;}
+    bool isConfigurable(uint8_t ch) override {
+      if(ch < 8) {
+        return true;
+      }
+      return false;
+    }
 };
 
 class DisplayExpansionDigital : public DisplayExpansion {
@@ -178,6 +193,10 @@ public:
       d.print("Digital ");
       d.print(i);
    }
+   float getMinVoltageAdcValue() override { return 0.0; }
+   float getMaxVoltageAdcValue() override { return 24.0; } 
+   
+   
 };
 
 class DisplayExpansionDigitalMec : public DisplayExpansion {
@@ -191,6 +210,8 @@ public:
       d.print("Dig MEC ");
       d.print(i);
    }
+   float getMinVoltageAdcValue() override { return 0.0; }
+   float getMaxVoltageAdcValue() override { return 24.0; } 
 };
 
 class DisplayExpansionDigitalSts : public DisplayExpansion {
@@ -204,6 +225,8 @@ public:
       d.print("Dig STS ");
       d.print(i);
    }
+   float getMinVoltageAdcValue() override { return 0.0; }
+   float getMaxVoltageAdcValue() override { return 24.0; } 
 };
 
 class DisplayR4Display : public DisplayExpansion {
@@ -253,27 +276,27 @@ public:
   }
   virtual ~ChFunction() { /* shared pointer shoul distruct itself */}
   ChFunction(const ChFunction &other) {
-    Serial.println("CC ChFunction");
+    
     value = other.value;
     unit = other.unit;
   }
 
 
-  virtual float getMinValue()      {return 0.0;}
-  virtual float getMaxValue()      {return 1.0;}
+  virtual float getMinValue(DisplayExpansion *p)      {(void)p; return 0.0;}
+  virtual float getMaxValue(DisplayExpansion *p)      {(void)p; return 1.0;}
   virtual float getStepValue()     {return 1.0;}
   virtual float getLongStepValue() {return 10.0;}
   virtual uint8_t getDisplayPrecision() {return 1;}
-  virtual void incrementValue() {value += getStepValue(); Serial.println("+ " + String(value)); clampValue(); }
-  virtual void decrementValue() {value -= getStepValue(); Serial.println("- " + String(value));clampValue(); }
-  virtual void bigIncrementValue() {value += getLongStepValue(); clampValue();}
-  virtual void bigDecrementValue() {value -= getLongStepValue(); clampValue(); }
+  virtual void incrementValue(DisplayExpansion *p) {value += getStepValue();  clampValue(p); }
+  virtual void decrementValue(DisplayExpansion *p) {value -= getStepValue();  clampValue(p); }
+  virtual void bigIncrementValue(DisplayExpansion *p) {value += getLongStepValue(); clampValue(p);}
+  virtual void bigDecrementValue(DisplayExpansion *p) {value -= getLongStepValue(); clampValue(p); }
   virtual bool isChangeable() {return false;}
-  virtual void clampValue() {
-    Serial.println("p " + String(value));
-    value = (value < getMinValue()) ? getMinValue() : value;
-    value = (value > getMaxValue()) ? getMaxValue() : value;
-    Serial.println("d " + String(value));
+  virtual void clampValue(DisplayExpansion *p) {
+    ;
+    value = (value < getMinValue(p)) ? getMinValue(p) : value;
+    value = (value > getMaxValue(p)) ? getMaxValue(p) : value;
+    
   }
   virtual void setValue(float v)  {value = v;}
   virtual float getValue() {return value; }
@@ -305,6 +328,8 @@ public:
     d.print("HIMP ");
   }
   void  displayValue(Adafruit_SSD1306 &d) override { (void)d; }
+  float getMinValue(DisplayExpansion *p) override     {(void)p; return 0.0;}
+  float getMaxValue(DisplayExpansion *p) override     {(void)p; return 0.0;}
 };
 /* __________________________________________________ Function: DIGITAL INPUT */
 class ChFunDigitalInput : public ChFunction {
@@ -322,6 +347,16 @@ public:
   void displayShortDecription(Adafruit_SSD1306 &d) override {
     d.print("DINP ");
   }
+  float getMinValue(DisplayExpansion *p)   override   {
+      if(p != nullptr)
+          return p->getMinDigitalValue();
+      return 0.0;
+   }
+  float getMaxValue(DisplayExpansion *p)   override   {
+      if(p != nullptr)
+          return p->getMaxDigitalValue();
+      return 1.0;
+   }
 };
 /* __________________________________________________Function: DIGITAL OUTPUT */
 class ChFunDigitalOutput : public ChFunction {
@@ -333,7 +368,7 @@ public:
     d.println("Digital Output");
   }
   void  displayValue(Adafruit_SSD1306 &d) override {
-    Serial.println("Ch digital output");
+    
     if(value == 0.0) {d.print("Off");}
     else {d.print("On");}
   }
@@ -341,6 +376,16 @@ public:
     d.print("DOUT ");
   }
   bool isChangeable() override {return true;}
+  float getMinValue(DisplayExpansion *p)   override   {
+      if(p != nullptr)
+          return p->getMinDigitalValue();
+      return 0.0;
+   }
+  float getMaxValue(DisplayExpansion *p)   override   {
+      if(p != nullptr)
+          return p->getMaxDigitalValue();
+      return 1.0;
+   }
 };
 /* _____________________________________________________Function: DIGITAL LED */
 class ChFunDigitalLED : public ChFunction {
@@ -359,6 +404,16 @@ public:
     d.print("LED  ");
   }
   bool isChangeable() override {return true;}
+  float getMinValue(DisplayExpansion *p)   override   {
+      if(p != nullptr)
+          return p->getMinDigitalValue();
+      return 0.0;
+   }
+  float getMaxValue(DisplayExpansion *p)   override   {
+      if(p != nullptr)
+          return p->getMaxDigitalValue();
+      return 1.0;
+   }
 };
 /* _____________________________________________________Function: VOLTAGE ADC */
 class ChFunADCVoltage : public ChFunction {
@@ -371,6 +426,16 @@ public:
   void displayShortDecription(Adafruit_SSD1306 &d) override {
     d.print("VADC ");
   }
+  float getMinValue(DisplayExpansion *p)   override   {
+      if(p != nullptr)
+          return p->getMinVoltageAdcValue();
+      return 0.0;
+   }
+  float getMaxValue(DisplayExpansion *p)   override   {
+      if(p != nullptr)
+          return p->getMaxVoltageAdcValue();
+      return 1.0;
+   }
 };
 /* _____________________________________________________Function: CURRENT ADC */
 class ChFunADCCurrent : public ChFunction {
@@ -383,6 +448,16 @@ public:
   void displayShortDecription(Adafruit_SSD1306 &d) override {
     d.print("CADC ");
   }
+  float getMinValue(DisplayExpansion *p)   override   {
+      if(p != nullptr)
+          return p->getMinCurrentAdcValue();
+      return 0.0;
+   }
+  float getMaxValue(DisplayExpansion *p)   override   {
+      if(p != nullptr)
+          return p->getMaxCurrentAdcValue();
+      return 1.0;
+   }
 };
 /* _____________________________________________________Function: VOLTAGE DAC */
 class ChFunDACVoltage : public ChFunction {
@@ -396,6 +471,16 @@ public:
     d.print("VDAC ");
   }
   bool isChangeable() override {return true;}
+  float getMinValue(DisplayExpansion *p)   override   {
+      if(p != nullptr)
+          return p->getMinVoltageDacValue();
+      return 0.0;
+   }
+  float getMaxValue(DisplayExpansion *p)   override   {
+      if(p != nullptr)
+          return p->getMaxVoltageDacValue();
+      return 1.0;
+   }
 };
 /* _____________________________________________________Function: CURRENT DAC */
 class ChFunDACCurrent : public ChFunction {
@@ -410,6 +495,16 @@ public:
     d.print("CDAC ");
   }
   bool isChangeable() override {return true;}
+  float getMinValue(DisplayExpansion *p)   override   {
+      if(p != nullptr)
+          return p->getMinCurrentDacValue();
+      return 0.0;
+   }
+  float getMaxValue(DisplayExpansion *p)   override   {
+      if(p != nullptr)
+          return p->getMaxCurrentDacValue();
+      return 1.0;
+   }
 };
 /* _____________________________________________________Function: RTD 2 WIRES */
 class ChFunRTD2Wires : public ChFunction {
@@ -447,6 +542,14 @@ public:
     d.print("PWM  ");
   }
   bool isChangeable() override {return true;}
+  float getMinValue(DisplayExpansion *p)   override   {
+      (void)p;
+      return 1.0;
+   }
+  float getMaxValue(DisplayExpansion *p)   override   {
+      (void)p;
+      return 50000;
+   }
 };
 /* __________________________________________________Function: PWM DUTY CICLE */
 class ChFunPWMDuty : public ChFunction {
@@ -460,6 +563,14 @@ public:
     d.print("PWM  ");
   }
   bool isChangeable() override {return true;}
+  float getMinValue(DisplayExpansion *p)   override   {
+      (void)p;
+      return 1.0;
+   }
+  float getMaxValue(DisplayExpansion *p)   override   {
+      (void)p;
+      return 99.0;
+   }
 };
 
 
@@ -497,12 +608,16 @@ public:
    }
 
    bool isConfigurable() {return is_configurable; }
+   void setConfigurable(bool r) {is_configurable = r;}
    bool isPwm() {return is_pwm;}
 
    
 
    /* _____________________________FACTORY METHOD TO CREATE function channels */
-   void makeFunction(uint8_t i, chFun_t f, chType_t t, chUnit_t u) {
+   void makeFunction(uint8_t i, chFun_t f, chType_t t, chUnit_t u, DisplayExpansion *p, uint8_t ch) {
+      if(p != nullptr) {
+        setConfigurable(p->isConfigurable(ch));
+      }
       if(i < MAX_FUNCTIONS_PER_CHANNEL) {
          if(f == funcs[i] && t == types[i] && functions[i] != nullptr) {
           return;
@@ -606,31 +721,31 @@ public:
       return 0.0;
    }
 
-   void incrementValue(uint8_t i) {
+   void incrementValue(uint8_t i, DisplayExpansion *p) {
       if(i >= MAX_FUNCTIONS_PER_CHANNEL) return;
       if(functions[i] != nullptr) {
-         functions[i]->incrementValue();
+         functions[i]->incrementValue(p);
       }
    }
 
-   void incrementBigValue(uint8_t i) {
+   void incrementBigValue(uint8_t i,DisplayExpansion *p) {
       if(i >= MAX_FUNCTIONS_PER_CHANNEL) return;
       if(functions[i] != nullptr) {
-         functions[i]->bigIncrementValue();
+         functions[i]->bigIncrementValue(p);
       }
    }
 
-   void decrementValue(uint8_t i) {
+   void decrementValue(uint8_t i,DisplayExpansion *p) {
       if(i >= MAX_FUNCTIONS_PER_CHANNEL) return;
       if(functions[i] != nullptr) {
-         functions[i]->decrementValue();
+         functions[i]->decrementValue(p);
       }
    }
 
-   void decrementBigValue(uint8_t i) {
+   void decrementBigValue(uint8_t i,DisplayExpansion *p) {
       if(i >= MAX_FUNCTIONS_PER_CHANNEL) return;
       if(functions[i] != nullptr) {
-        functions[i]->bigDecrementValue();
+        functions[i]->bigDecrementValue(p);
       }
    }
 

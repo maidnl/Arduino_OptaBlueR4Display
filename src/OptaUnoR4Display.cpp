@@ -38,7 +38,11 @@ OptaUnoR4Display::OptaUnoR4Display()
 }
 
 /*_________________________________________________________________DESTRUCTOR */
-OptaUnoR4Display::~OptaUnoR4Display() {}
+OptaUnoR4Display::~OptaUnoR4Display() {
+  if(dexp != nullptr) {
+    delete dexp;
+  }
+}
 
 /* > Instructions:
  * OVERRIDE virtual base methods: ALWAYS call BASE Module member function at
@@ -417,11 +421,11 @@ bool OptaUnoR4Display::parse_get_ch_change_config(){
 
 /* _________________________________________PREPARE ANS: get change ch config */
 uint8_t OptaUnoR4Display::msg_get_ch_change_config(){
-  tx_buffer[Ans_GET_CH_CONFIG_IndexPos] = i2c_change_expansion_index;
-  tx_buffer[Ans_GET_CH_CONFIG_ExpTypePos] = i2c_change_expansion_type;
-  tx_buffer[Ans_GET_CH_CONFIG_ChannelPos] = i2c_change_channel_index;
+  tx_buffer[Ans_GET_CH_CONFIG_IndexPos] = i2c_change_expansion_index_config;
+  tx_buffer[Ans_GET_CH_CONFIG_ExpTypePos] = i2c_change_expansion_type_config;
+  tx_buffer[Ans_GET_CH_CONFIG_ChannelPos] = i2c_change_channel_index_config;
   tx_buffer[Ans_GET_CH_CONFIG_ConfigPos] = i2c_change_channel_config;
-  i2c_change_expansion_index = 255;
+  i2c_change_expansion_index_config = 255;
   return prepareGetAns(tx_buffer, 
                        Ans_GET_CH_CONFIG,
                        AnsLen_GET_CH_CONFIG, 
@@ -481,11 +485,15 @@ bool OptaUnoR4Display::parse_set_ch_configuration() {
       channels[ch].makeFunction(0, 
                                 rx_buffer[CH_CFG_Func1Pos], 
                                 rx_buffer[CH_CFG_Type1Pos], 
-                                rx_buffer[CH_CFG_U1Pos]);
+                                rx_buffer[CH_CFG_U1Pos],
+                                dexp,
+                                ch);
       channels[ch].makeFunction(1, 
                                 rx_buffer[CH_CFG_Func2Pos], 
                                 rx_buffer[CH_CFG_Type2Pos], 
-                                rx_buffer[CH_CFG_U2Pos]);
+                                rx_buffer[CH_CFG_U2Pos],
+                                dexp,
+                                ch);
 
       v.bytes[0] = rx_buffer[CH_CFG_V1Pos_0];
       v.bytes[1] = rx_buffer[CH_CFG_V1Pos_1];
@@ -501,6 +509,7 @@ bool OptaUnoR4Display::parse_set_ch_configuration() {
       v.bytes[3] = rx_buffer[CH_CFG_V2Pos_3];
       channels[ch].setValue(1, v.value);
     }
+    ch_info_received = ch;
     return true;
   }
 
@@ -755,8 +764,8 @@ void OptaUnoR4Display::draw_wait_change_value(uint8_t ch) {
   display.println(ch);
 
   display.println("I am sending new");
-  display.println("value to controller");
-  display.println();
+  display.println("value or config"); 
+  display.println("to controller");
   display.println("Please wait...");
 
   display.display();
@@ -791,12 +800,13 @@ void OptaUnoR4Display::draw_change_value_page(uint8_t ch) {
 
 /* _________________________________________________ DRAW: change config page */
 void OptaUnoR4Display::draw_change_channel_config(uint8_t ch) {
+  
   display.clearDisplay();
-
+ 
   display_expansion_type_as_title();
 
   display.setTextSize(1);  
-  display.setCursor(0,18);
+  display.setCursor(0,16);
 
   display.print("* Selected ch: ");
   display.println(ch);
@@ -809,7 +819,7 @@ void OptaUnoR4Display::draw_change_channel_config(uint8_t ch) {
     sel_ch_cfg = 0;
   }
 
-  while(sel_ch_cfg > stop_ch_cfg) {
+  while(sel_ch_cfg > stop_ch_cfg-1) {
     start_ch_cfg++;
     stop_ch_cfg++;
   }
@@ -820,18 +830,18 @@ void OptaUnoR4Display::draw_change_channel_config(uint8_t ch) {
   }
 
   bool ok = false;
-
+  
   if(dexp != nullptr) {
-    if(dexp->isConfigurable()) {
       if(channels[selected_channel].isConfigurable()) {
         for(int i = start_ch_cfg; i < stop_ch_cfg; i++ ) {
           display_cursor_selection(i, sel_ch_cfg);
           dexp->displayConfiguration(display, i, selected_channel);
+          display.println();
         }
         display.println("Left:back/Right:sel");
         ok = true;
       }
-    }
+    
   }
 
   if(!ok) {
@@ -1042,19 +1052,19 @@ void OptaUnoR4Display::main_state_machine() {
   /* ________________________________________________________________________ */
     case STATE_CHANGE_VALUE_BUTTON_HANDLE:
       if(btn_pressed == EVENT_DOWN) {
-        channels[selected_channel].decrementValue(selected_function);
+        channels[selected_channel].decrementValue(selected_function,dexp);
         st = STATE_CHANGE_VALUE;
       }
       else if(btn_pressed == EVENT_DOWN_LONG) {
-        channels[selected_channel].decrementBigValue(selected_function);
+        channels[selected_channel].decrementBigValue(selected_function,dexp);
         st = STATE_CHANGE_VALUE;
       }
       else if(btn_pressed == EVENT_UP) {
-        channels[selected_channel].incrementValue(selected_function);
+        channels[selected_channel].incrementValue(selected_function,dexp);
         st = STATE_CHANGE_VALUE;
       }
       else if(btn_pressed == EVENT_UP_LONG) {
-        channels[selected_channel].incrementBigValue(selected_function);
+        channels[selected_channel].incrementBigValue(selected_function,dexp);
         st = STATE_CHANGE_VALUE;
       }
       else if(btn_pressed == EVENT_LEFT_LONG) {
@@ -1076,6 +1086,7 @@ void OptaUnoR4Display::main_state_machine() {
       while(i2c_change_expansion_index != 255) {
 
       }
+      do_not_update_values_from_controller = false;
       st = STATE_SHOW_EXPANSION;
     break;
   /* ________________________________________________________________________ */
@@ -1102,11 +1113,17 @@ void OptaUnoR4Display::main_state_machine() {
     break;
   /* ________________________________________________________________________ */  
     case STATE_SET_CHANGE_CONFIG:
-      i2c_change_expansion_index = i2c_exp_selected_transmitted;
+      i2c_change_expansion_index_config = i2c_exp_selected_transmitted;
       if(dexp != nullptr) 
-        i2c_change_expansion_type = dexp->getType(); 
-      i2c_change_channel_index = selected_channel;
+        i2c_change_expansion_type_config = dexp->getType(); 
+      i2c_change_channel_index_config = selected_channel;
       i2c_change_channel_config = sel_ch_cfg;
+      draw_wait_change_value(selected_channel);
+      while(i2c_change_expansion_index_config != 255) {
+
+      }
+      ch_info_received = -1;
+      while(ch_info_received == -1) {}
       st = STATE_SHOW_EXPANSION;
     break;
     default:

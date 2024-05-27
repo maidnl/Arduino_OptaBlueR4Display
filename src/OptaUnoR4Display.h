@@ -107,6 +107,12 @@ protected:
   volatile float i2c_change_channel_value = 0.0;
   volatile uint8_t i2c_change_channel_config = 0;
 
+  volatile uint8_t i2c_change_expansion_index_config = UNOR4_DISPLAY_NO_SELECTION;
+  volatile uint8_t i2c_change_expansion_type_config = UNOR4_DISPLAY_NO_SELECTION;
+  volatile uint8_t i2c_change_channel_index_config = UNOR4_DISPLAY_NO_SELECTION;
+
+  volatile int8_t ch_info_received = -1;
+
   
   int8_t sel_ch_cfg = 0;
   uint8_t start_ch_cfg = 0;

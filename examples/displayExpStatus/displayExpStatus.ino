@@ -279,7 +279,7 @@ void configureChannels(uint8_t device) {
               e.beginChannelAsCurrentAdc(ch); // use default parameters
             }
             else if(sel == 5) {
-              Serial.println(" RTD 2 WIRES");Serial.println(" Selected ANALOG expansion at index " + String(device));
+              Serial.println(" RTD 2 WIRES");
               e.beginChannelAsRtd(ch,false,1.0); // third parameter is unused in
               // this case
             }

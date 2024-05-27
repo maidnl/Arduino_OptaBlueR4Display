@@ -659,7 +659,7 @@ static void sendAnalogExpansionInfo2R4Display(uint8_t index, R4DisplayExpansion 
           }
         }
         /* RTD */
-        else if(ae.isChRtd(k)) {
+        else if(ae.isChRtd2Wires(k)) {
           r4.setChannelConfiguration(k, 
                                      CH_FUNCTION_RTD,
                                      CH_TYPE_2_WIRES, 
@@ -670,6 +670,20 @@ static void sendAnalogExpansionInfo2R4Display(uint8_t index, R4DisplayExpansion 
                                      0.0, 
                                      CH_UNIT_NO_UNIT);
         }
+        else if(ae.isChRtd3Wires(k)) {
+          r4.setChannelConfiguration(k, 
+                                     CH_FUNCTION_RTD,
+                                     CH_TYPE_3_WIRES, 
+                                     (float)ae.getRtd(k), 
+                                     CH_UNIT_OHM,
+                                     CH_FUNCTION_UNAVAILABLE,
+                                     CH_TYPE_NO_TYPE, 
+                                     0.0, 
+                                     CH_UNIT_NO_UNIT);
+        }
+
+
+
 
         for(int k = OA_FIRST_PWM_CH; k <= OA_LAST_PWM_CH; k++) {
           r4.setChannelConfiguration(k, 
@@ -732,8 +746,11 @@ static void manageUserChangeValue(R4DisplayExpansion &r4) {
 static void manageUserChangeConfig(R4DisplayExpansion &r4) {
   ChangeChConfig chg;
   if(r4.getUpdateChConfig(chg)) {
+    
     if(chg.exp_type == EXPANSION_OPTA_ANALOG) {
+      
       AnalogExpansion ae = OptaController.getExpansion(chg.exp_index);
+      
       if(ae) {
         
         if(chg.config == CH_CONFIG_DAC_VOLTAGE) {
