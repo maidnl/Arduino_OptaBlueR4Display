@@ -718,11 +718,13 @@ void OptaUnoR4Display::draw_expansion_page() {
         display.println(" ");
       }
     }
+    display.println("left back, right select");
   }
   else {
     display.println();
+    display.println("left back");
   }
-  display.println("left back, right select");
+  
   display.display();
   
 }
@@ -1019,7 +1021,7 @@ void OptaUnoR4Display::main_state_machine() {
       else if(btn_pressed == EVENT_LEFT_LONG) {
         st = STATE_WAIT_FOR_EXPANSION;
       }
-      else if(btn_pressed == EVENT_RIGHT_LONG) {
+      else if(btn_pressed == EVENT_RIGHT_LONG && channels_number > 0) {
         st = STATE_CHANGE_CHANNEL;
       }
     break;
