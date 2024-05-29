@@ -541,7 +541,7 @@ void serialInterface() {
   }
 }
 
-
+R4DisplayExpansion expDispl;
 /* -------------------------------------------------------------------------- */
 /*                                 SETUP                                      */
 /* -------------------------------------------------------------------------- */
@@ -556,8 +556,26 @@ void setup() {
   OptaController.registerCustomExpansion(R4DisplayExpansion::getProduct(),
                                          R4DisplayExpansion::makeExpansion,
                                          R4DisplayExpansion::startUp);
+
+  for(int i = 0; i < OPTA_CONTROLLER_MAX_EXPANSION_NUM; i++) {
+    expDispl = OptaController.getExpansion(i);
+    if(expDispl) {
+      break;
+    }
+  }  
+
+  if(!expDispl){
+    Serial.println("Display not present");
+    while(1) {
+
+    }
+  }
+
+
   
 }
+
+
 
 
 /* -------------------------------------------------------------------------- */
@@ -576,12 +594,12 @@ void loop() {
   /*
    * Sending information to R4 display
    */
-  R4DisplayExpansion::updateDisplay();
+  expDispl.updateDisplay();
 
   /*
    * Getting changes from user from R4 display
    */
-  R4DisplayExpansion::updateExpansions();
+  expDispl.updateExpansions();
   
 }
 

@@ -334,6 +334,7 @@ unsigned int R4DisplayExpansion::execute(uint32_t what) {
   return rv;
 }
 
+
 /* __________________________________________________________ I2C TRANSACTION */
 unsigned int
 R4DisplayExpansion::i2c_transaction(uint8_t (R4DisplayExpansion::*prepare)(),
@@ -364,6 +365,8 @@ R4DisplayExpansion::i2c_transaction(uint8_t (R4DisplayExpansion::*prepare)(),
 }
 
 } // namespace Opta
+
+
 
 /* ************************************************************************** */
 /* SPECIFIC PUBLIC FUNCTION FOR THIS EXPANSION                                */
@@ -456,17 +459,17 @@ void R4DisplayExpansion::setChannelConfiguration(uint8_t ch,
 
 
 
-static void sendDigitalExpansionInfo2R4Display(uint8_t index, R4DisplayExpansion &r4) {
+void R4DisplayExpansion::send_dig_exp_info_2_r4(uint8_t index) {
   /* handle selected expansion - if digital*/
   DigitalExpansion de = OptaController.getExpansion(index);
   if(de) {
     /* Telling r4 it has to display a digital expansion 
       using EXPANSION_DIGITAL_INVALID as generic digital expansion type */
-    r4.setExpansionFeatures(EXPANSION_DIGITAL_INVALID, index, 8+16);
+    setExpansionFeatures(EXPANSION_DIGITAL_INVALID, index, 8+16);
    
     /* informing r4 about the channel status of digital output */
     for(int k = 0; k < DIGITAL_OUT_NUM; k++) {
-      r4.setChannelConfiguration(k, 
+      setChannelConfiguration(k, 
                                  CH_FUNCTION_DIGITAL,
                                  CH_TYPE_OUTPUT,
                                  (float)de.digitalOutRead(k), 
@@ -481,7 +484,7 @@ static void sendDigitalExpansionInfo2R4Display(uint8_t index, R4DisplayExpansion
     /* informing r4 about the channel status of digital/analog input */
     for(int k = 0; k < DIGITAL_IN_NUM; k++) {
       
-      r4.setChannelConfiguration(k + DIGITAL_OUT_NUM, 
+      setChannelConfiguration(k + DIGITAL_OUT_NUM, 
                                  CH_FUNCTION_DIGITAL,
                                  CH_TYPE_INPUT,
                                  (float)de.digitalRead(k,true), 
@@ -495,16 +498,16 @@ static void sendDigitalExpansionInfo2R4Display(uint8_t index, R4DisplayExpansion
 }
 
 
-static void sendAnalogExpansionInfo2R4Display(uint8_t index, R4DisplayExpansion &r4) {
+void R4DisplayExpansion::send_analog_info_2_r4(uint8_t index) {
   /* handle selected expansion - if analog */
    AnalogExpansion ae = OptaController.getExpansion(index);
    if(ae) {
-      r4.setExpansionFeatures(EXPANSION_OPTA_ANALOG, index, 8+4);
+      setExpansionFeatures(EXPANSION_OPTA_ANALOG, index, 8+4);
       for(int k = 0; k < OA_AN_CHANNELS_NUM; k++) {
         /* HIGH IMPEDENCE */
         if(ae.isChHighImpedance(k)) {
           if(ae.isChVoltageAdc(k)) {
-            r4.setChannelConfiguration(k, 
+            setChannelConfiguration(k, 
                                        CH_FUNCTION_HIGH_IMPEDENCE,
                                        CH_TYPE_NO_TYPE,
                                        0.0, 
@@ -515,7 +518,7 @@ static void sendAnalogExpansionInfo2R4Display(uint8_t index, R4DisplayExpansion 
                                        CH_UNIT_VOLT);
           }
           else {
-            r4.setChannelConfiguration(k, 
+            setChannelConfiguration(k, 
                                        CH_FUNCTION_HIGH_IMPEDENCE,
                                        CH_TYPE_NO_TYPE,
                                        0.0, 
@@ -529,7 +532,7 @@ static void sendAnalogExpansionInfo2R4Display(uint8_t index, R4DisplayExpansion 
         /* DIGITAL INPUT */
         else if(ae.isChDigitalInput(k)) {
           if(ae.isChVoltageAdc(k)) {
-            r4.setChannelConfiguration(k, 
+            setChannelConfiguration(k, 
                                        CH_FUNCTION_DIGITAL,
                                        CH_TYPE_INPUT,
                                        (float)ae.digitalRead(k,true), 
@@ -540,7 +543,7 @@ static void sendAnalogExpansionInfo2R4Display(uint8_t index, R4DisplayExpansion 
                                        CH_UNIT_VOLT);
           }
           else if(ae.isChCurrentAdc(k)) {
-            r4.setChannelConfiguration(k, 
+            setChannelConfiguration(k, 
                                        CH_FUNCTION_DIGITAL,
                                        CH_TYPE_INPUT,
                                        (float)ae.digitalRead(k,true), 
@@ -551,7 +554,7 @@ static void sendAnalogExpansionInfo2R4Display(uint8_t index, R4DisplayExpansion 
                                        CH_UNIT_mAMPERE);
           }
           else {
-            r4.setChannelConfiguration(k, 
+            setChannelConfiguration(k, 
                                        CH_FUNCTION_DIGITAL,
                                        CH_TYPE_INPUT,
                                        (float)ae.digitalRead(k,true), 
@@ -565,7 +568,7 @@ static void sendAnalogExpansionInfo2R4Display(uint8_t index, R4DisplayExpansion 
         /* VOLTAGE ADC */
         else if(ae.isChVoltageAdc(k)) {
           if(ae.isChCurrentAdc(k)) {
-            r4.setChannelConfiguration(k, 
+            setChannelConfiguration(k, 
                                        CH_FUNCTION_ADC,
                                        CH_TYPE_VOLTAGE, 
                                        (float)ae.pinVoltage(k,true), 
@@ -577,7 +580,7 @@ static void sendAnalogExpansionInfo2R4Display(uint8_t index, R4DisplayExpansion 
           }
           else {
 
-            r4.setChannelConfiguration(k, 
+            setChannelConfiguration(k, 
                                        CH_FUNCTION_ADC,
                                        CH_TYPE_VOLTAGE, 
                                        (float)ae.pinVoltage(k,true), 
@@ -591,7 +594,7 @@ static void sendAnalogExpansionInfo2R4Display(uint8_t index, R4DisplayExpansion 
         /* CURRENT ADC */
         else if(ae.isChCurrentAdc(k)) {
           if(ae.isChVoltageAdc(k)) {
-            r4.setChannelConfiguration(k, 
+            setChannelConfiguration(k, 
                                        CH_FUNCTION_ADC,
                                        CH_TYPE_CURRENT, 
                                        (float)ae.pinCurrent(k,true), 
@@ -602,7 +605,7 @@ static void sendAnalogExpansionInfo2R4Display(uint8_t index, R4DisplayExpansion 
                                        CH_UNIT_VOLT);
           }
           else {
-            r4.setChannelConfiguration(k, 
+            setChannelConfiguration(k, 
                                        CH_FUNCTION_ADC,
                                        CH_TYPE_CURRENT, 
                                        (float)ae.pinCurrent(k,true), 
@@ -616,7 +619,7 @@ static void sendAnalogExpansionInfo2R4Display(uint8_t index, R4DisplayExpansion 
         /* VOLTAGE DAC */
         else if(ae.isChVoltageDac(k)) {
           if(ae.isChCurrentAdc(k)) {
-            r4.setChannelConfiguration(k, 
+            setChannelConfiguration(k, 
                                        CH_FUNCTION_DAC,
                                        CH_TYPE_VOLTAGE, 
                                        (float)ae.pinVoltage(k,true), 
@@ -627,7 +630,7 @@ static void sendAnalogExpansionInfo2R4Display(uint8_t index, R4DisplayExpansion 
                                        CH_UNIT_mAMPERE);
           }
           else {
-            r4.setChannelConfiguration(k, 
+            setChannelConfiguration(k, 
                                        CH_FUNCTION_DAC,
                                        CH_TYPE_VOLTAGE, 
                                        (float)ae.pinVoltage(k,true), 
@@ -642,7 +645,7 @@ static void sendAnalogExpansionInfo2R4Display(uint8_t index, R4DisplayExpansion 
         /* CURRENT DAC */
         else if(ae.isChCurrentDac(k)) {
           if(ae.isChVoltageAdc(k)) {
-            r4.setChannelConfiguration(k, 
+            setChannelConfiguration(k, 
                                        CH_FUNCTION_DAC,
                                        CH_TYPE_CURRENT, 
                                        (float)ae.pinCurrent(k,true), 
@@ -653,7 +656,7 @@ static void sendAnalogExpansionInfo2R4Display(uint8_t index, R4DisplayExpansion 
                                        CH_UNIT_VOLT);
           }
           else {
-            r4.setChannelConfiguration(k, 
+            setChannelConfiguration(k, 
                                        CH_FUNCTION_DAC,
                                        CH_TYPE_CURRENT, 
                                        (float)ae.pinCurrent(k,true), 
@@ -666,7 +669,7 @@ static void sendAnalogExpansionInfo2R4Display(uint8_t index, R4DisplayExpansion 
         }
         /* RTD */
         else if(ae.isChRtd2Wires(k)) {
-          r4.setChannelConfiguration(k, 
+          setChannelConfiguration(k, 
                                      CH_FUNCTION_RTD,
                                      CH_TYPE_2_WIRES, 
                                      (float)ae.getRtd(k), 
@@ -677,7 +680,7 @@ static void sendAnalogExpansionInfo2R4Display(uint8_t index, R4DisplayExpansion 
                                      CH_UNIT_NO_UNIT);
         }
         else if(ae.isChRtd3Wires(k)) {
-          r4.setChannelConfiguration(k, 
+          setChannelConfiguration(k, 
                                      CH_FUNCTION_RTD,
                                      CH_TYPE_3_WIRES, 
                                      (float)ae.getRtd(k), 
@@ -692,7 +695,7 @@ static void sendAnalogExpansionInfo2R4Display(uint8_t index, R4DisplayExpansion 
 
 
         for(int k = OA_FIRST_PWM_CH; k <= OA_LAST_PWM_CH; k++) {
-          r4.setChannelConfiguration(k, 
+          setChannelConfiguration(k, 
                                      CH_FUNCTION_PWM,
                                      CH_TYPE_FREQ, 
                                      (float)ae.getPwmFreqHz(k), 
@@ -707,17 +710,17 @@ static void sendAnalogExpansionInfo2R4Display(uint8_t index, R4DisplayExpansion 
    }
 }
 
-static void sendR4DisplayInfo2R4Display(uint8_t index, R4DisplayExpansion &r4) {
+void R4DisplayExpansion::send_r4_info_2_r4(uint8_t index) {
   R4DisplayExpansion re = OptaController.getExpansion(index);
   if(re) {
-    r4.setExpansionFeatures(UNO_R4_DISPLAY_ADDITIONAL_TYPE, index, 0);
+    setExpansionFeatures(UNO_R4_DISPLAY_ADDITIONAL_TYPE, index, 0);
   }
 }
 
 
-static void manageUserChangeValue(R4DisplayExpansion &r4) {
+void R4DisplayExpansion::manage_chg_value() {
   ChangeChValue chg;
-  if(r4.getUpdateChValue(chg)) {
+  if(getUpdateChValue(chg)) {
     
     if(chg.exp_type == EXPANSION_OPTA_ANALOG) {
       AnalogExpansion ae = OptaController.getExpansion(chg.exp_index);
@@ -749,9 +752,9 @@ static void manageUserChangeValue(R4DisplayExpansion &r4) {
 }
 
 
-static void manageUserChangeConfig(R4DisplayExpansion &r4) {
+void R4DisplayExpansion::manage_chg_config() {
   ChangeChConfig chg;
-  if(r4.getUpdateChConfig(chg)) {
+  if(getUpdateChConfig(chg)) {
     
     if(chg.exp_type == EXPANSION_OPTA_ANALOG) {
       
@@ -789,36 +792,26 @@ static void manageUserChangeConfig(R4DisplayExpansion &r4) {
   }
 }
 
-uint8_t  R4DisplayExpansion::selected_expansion = UNOR4_DISPLAY_NO_SELECTION;
-void R4DisplayExpansion::updateDisplay() {
-  for(int i = 0; i < OPTA_CONTROLLER_MAX_EXPANSION_NUM; i++) {
-    R4DisplayExpansion r4 = OptaController.getExpansion(i);
-    if(r4) {
-      /* telling R4 how many expansion are present */
-      r4.setNumOfExpansions(OptaController.getExpansionNum());
-      /* getting from R4 if user has selected an expansion */
-      selected_expansion = r4.getSelectedExpansion(); 
-      /* send information to be displayed about selected expansion */
-      sendAnalogExpansionInfo2R4Display(selected_expansion,r4);
-      sendDigitalExpansionInfo2R4Display(selected_expansion,r4);
-      sendR4DisplayInfo2R4Display(selected_expansion,r4);
-    }
-  }  
 
+void R4DisplayExpansion::updateDisplay() {
+  
+      /* telling R4 how many expansion are present */
+      setNumOfExpansions(OptaController.getExpansionNum());
+      /* getting from R4 if user has selected an expansion */
+      selected_expansion = getSelectedExpansion(); 
+      /* send information to be displayed about selected expansion */
+      send_dig_exp_info_2_r4(selected_expansion);
+      send_analog_info_2_r4(selected_expansion);
+      send_r4_info_2_r4(selected_expansion);
 }
 
 void R4DisplayExpansion::updateExpansions() {
-  for(int i = 0; i < OPTA_CONTROLLER_MAX_EXPANSION_NUM; i++) {
-    R4DisplayExpansion r4 = OptaController.getExpansion(i);
-    if(r4) {
+  
       /* get if user want to change a channel value */
-      manageUserChangeValue(r4);
+      manage_chg_value();
       /* get if user want to change a channel value */
-      manageUserChangeConfig(r4);
+      manage_chg_config();
        
-    }
-  }  
-
 }
 
 

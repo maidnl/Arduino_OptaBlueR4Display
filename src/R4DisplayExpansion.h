@@ -52,9 +52,9 @@ public:
 class R4DisplayExpansion : public Expansion {
 
 public:
-  static uint8_t selected_expansion;
-  static void updateDisplay();
-  static void updateExpansions();
+  uint8_t selected_expansion = UNOR4_DISPLAY_NO_SELECTION;
+  void updateDisplay();
+  void updateExpansions();
 
 
   R4DisplayExpansion();
@@ -101,11 +101,17 @@ public:
 
 protected:
   
+  void manage_chg_config();
+  void manage_chg_value();
 
-
+  void send_dig_exp_info_2_r4(uint8_t index);
+  void send_analog_info_2_r4(uint8_t index);
+  void send_r4_info_2_r4(uint8_t index);
+  
   unsigned int i2c_transaction(uint8_t (R4DisplayExpansion::*prepare)(),
                                bool (R4DisplayExpansion::*parse)(),
                                int rx_bytes);
+                               
   uint8_t msg_get_selected_expansion();
   bool parse_ans_get_selected_expansion();
   bool parse_ack();
