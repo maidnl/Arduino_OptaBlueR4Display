@@ -482,6 +482,8 @@ bool OptaUnoR4Display::parse_set_ch_configuration() {
     uint8_t ch = rx_buffer[CH_CFG_ChPos];
     if(ch < MAX_NUMBER_OF_CHANNELS && !do_not_update_values_from_controller) {
 
+      channels[ch].setIsUpdated(true);
+
       channels[ch].makeFunction(0, 
                                 rx_buffer[CH_CFG_Func1Pos], 
                                 rx_buffer[CH_CFG_Type1Pos], 
@@ -633,7 +635,7 @@ void OptaUnoR4Display::display_expansion_type_as_title() {
   display.setTextSize(2);             
   display.setTextColor(SSD1306_WHITE);        
   display.setCursor(0,0);
-  
+
   if(dexp != nullptr) {
      dexp->display(display,exp_selected);
   }
@@ -667,51 +669,59 @@ void OptaUnoR4Display::draw_expansion_page() {
   display.setTextSize(1);  
   display.setCursor(0,16);
 
-  //Serial.println("selected row: " + String(selected_channel) + " first: " + String(first_ch_displayed) + " last: " + String(last_ch_displayed));
+  if(channels_number > 0) {
   
-  while(selected_channel >= channels_number) {
-    selected_channel--;
-  }
-  
-  while(selected_channel < 0) {
-    selected_channel++;
-  }
-
-  if(selected_channel > last_ch_displayed) {
-    first_ch_displayed++;
-  }
-
-  while(selected_channel < first_ch_displayed) {
-    first_ch_displayed--;
-  }
-  
-  int r = -1;
-  uint8_t current_ch_displayed = first_ch_displayed;;
-  while(current_ch_displayed < channels_number) {
-    display_cursor_selection(current_ch_displayed, selected_channel);
+    while(selected_channel >= channels_number) {
+      selected_channel--;
+    }
     
-    if(current_ch_displayed < channels_number) {
-      channels[current_ch_displayed].displayChannel(display);
-      r += channels[current_ch_displayed].getNumOfFunctions();
-      last_ch_displayed = current_ch_displayed;
-    }  
-    else {
-      display.println("[...wait...]");
+    while(selected_channel < 0) {
+      selected_channel++;
     }
 
-    current_ch_displayed++;
-
-    if(current_ch_displayed >= channels_number) {
-      break;
+    if(selected_channel > last_ch_displayed) {
+      first_ch_displayed++;
     }
-    if((r + channels[current_ch_displayed].getNumOfFunctions()) >= 5) {
-      break;
+
+    while(selected_channel < first_ch_displayed) {
+      first_ch_displayed--;
+    }
+    
+    int r = -1;
+    uint8_t current_ch_displayed = first_ch_displayed;
+    
+    
+
+    if(channels[first_ch_displayed].isUpdated()) {
+      while(current_ch_displayed < channels_number) {
+        display_cursor_selection(current_ch_displayed, selected_channel);
+        
+        if(current_ch_displayed < channels_number) {
+          channels[current_ch_displayed].displayChannel(display);
+          r += channels[current_ch_displayed].getNumOfFunctions();
+          last_ch_displayed = current_ch_displayed;
+        }  
+        else {
+          display.println("[...wait...]");
+        }
+    
+        current_ch_displayed++;
+    
+        if(current_ch_displayed >= channels_number) {
+          break;
+        }
+        if((r + channels[current_ch_displayed].getNumOfFunctions()) >= 5) {
+          break;
+        }
+      }
+      if(r == 3) {
+        display.println(" ");
+      }
     }
   }
-  if(r == 3) {
-    display.println(" ");
+  else {
+    display.println();
   }
-
   display.println("left back, right select");
   display.display();
   
@@ -965,6 +975,9 @@ void OptaUnoR4Display::main_state_machine() {
   /* ________________________________________________________________________ */
   /* wait for expansion feature message sent by the controller */
     case STATE_WAIT_EXPANSION_FEATURES:
+      for(int i = 0; i < MAX_NUMBER_OF_CHANNELS; i++) {
+        channels[i].setIsUpdated(false);
+      }
       draw_wait_for_expansion_features();
       /* as soon as the message arrives "it confirms" the expansion selected 
          so the feature are copied */
@@ -1040,6 +1053,7 @@ void OptaUnoR4Display::main_state_machine() {
       st = STATE_CHANGE_VALUE;
     }
     else if(btn_pressed == EVENT_DOWN_LONG) {
+      sel_ch_cfg = 0;
       st = STATE_CHANGE_CONFIG;
     }
     break;

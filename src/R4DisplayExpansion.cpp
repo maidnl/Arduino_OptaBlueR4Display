@@ -88,7 +88,7 @@ uint8_t R4DisplayExpansion::msg_get_ch_change_value() {
 
 /* ________________________________________________PARSE: get change ch value */  
 bool R4DisplayExpansion::parse_get_ch_change_value() {
-  
+  //Serial.print("PARSE parse_get_ch_change_value: ");
   if(checkAnsGetReceived(ctrl->getRxBuffer(), 
                          Ans_GET_CH_VALUE,
                          AnsLen_GET_CH_VALUE, 
@@ -97,11 +97,16 @@ bool R4DisplayExpansion::parse_get_ch_change_value() {
     /* This message (answer fo the get changed channel value contains the 
        following information: */  
     /* 1. the index of the expansion the user want to change */
+    //Serial.print("RICEVUTO ");
     iregs[ADD_SELECTED_EXPANSION_INDEX] = ctrl->getRxBuffer()[Ans_GET_CH_VALUE_IndexPos];
+    //Serial.print("INDEX " +  String(iregs[ADD_SELECTED_EXPANSION_INDEX]));
     /* 2. the type of the expansion the user want to change */
     iregs[ADD_SELECTED_EXPANSION_TYPE] = ctrl->getRxBuffer()[Ans_GET_CH_VALUE_ExpTypePos];
+    //Serial.print(" TYPE " +  String(iregs[ADD_SELECTED_EXPANSION_TYPE]));
     /* 3. the channel the user want to change */
     iregs[ADD_SELECTED_EXPANSION_CHANNEL] = ctrl->getRxBuffer()[Ans_GET_CH_VALUE_ChannelPos];
+    //Serial.print(" CHANNEL " +  String(iregs[ADD_SELECTED_EXPANSION_CHANNEL]));
+    
     /* 4. the new value of the channel the user want to change */
     Float_u v;
     v.bytes[0] = ctrl->getRxBuffer()[Ans_GET_CH_VALUE_ValuePos + 0];
@@ -109,6 +114,7 @@ bool R4DisplayExpansion::parse_get_ch_change_value() {
     v.bytes[2] = ctrl->getRxBuffer()[Ans_GET_CH_VALUE_ValuePos + 2];
     v.bytes[3] = ctrl->getRxBuffer()[Ans_GET_CH_VALUE_ValuePos + 3];
     fregs[ADD_SELECTED_EXPANSION_CHANNEL_VALUE] = v.value;
+    //Serial.println(" VALUE " +  String(fregs[ADD_SELECTED_EXPANSION_CHANNEL_VALUE]));
     return true;
   }
   return false;
@@ -128,27 +134,27 @@ uint8_t R4DisplayExpansion::msg_get_ch_change_config(){
 /* _______________________________________________PARSE: get change ch config */
 bool R4DisplayExpansion::parse_get_ch_change_config() {
   
-  Serial.print("PARSE parse_get_ch_change_config: ");
-  for(int i = 0; i < getExpectedAnsLen(Ans_GET_CH_CONFIG_Len); i++) {  
-    Serial.print(ctrl->getRxBuffer()[i], HEX);
-    Serial.print(" ");
-  }
-  Serial.println();
+  //Serial.print("PARSE parse_get_ch_change_config: ");
+  //for(int i = 0; i < getExpectedAnsLen(Ans_GET_CH_CONFIG_Len); i++) {  
+    //Serial.print(ctrl->getRxBuffer()[i], HEX);
+    //Serial.print(" ");
+  //}
+  //Serial.println();
   
   if(checkAnsGetReceived(ctrl->getRxBuffer(), 
                          Ans_GET_CH_CONFIG,
                          AnsLen_GET_CH_CONFIG, 
                          Ans_GET_CH_CONFIG_Len)) {
     
-    Serial.print("RICEVUTO ");
+    //Serial.print("RICEVUTO ");
     iregs[ADD_SELECTED_EXPANSION_INDEX] = ctrl->getRxBuffer()[Ans_GET_CH_CONFIG_IndexPos];
-    Serial.print("INDEX " +  String(iregs[ADD_SELECTED_EXPANSION_INDEX]));
+    //Serial.print("INDEX " +  String(iregs[ADD_SELECTED_EXPANSION_INDEX]));
     iregs[ADD_SELECTED_EXPANSION_TYPE] = ctrl->getRxBuffer()[Ans_GET_CH_CONFIG_ExpTypePos];
-    Serial.print(" TYPE " +  String(iregs[ADD_SELECTED_EXPANSION_TYPE]));
+    //Serial.print(" TYPE " +  String(iregs[ADD_SELECTED_EXPANSION_TYPE]));
     iregs[ADD_SELECTED_EXPANSION_CHANNEL] = ctrl->getRxBuffer()[Ans_GET_CH_CONFIG_ChannelPos];
-    Serial.print(" CHANNEL " +  String(iregs[ADD_SELECTED_EXPANSION_CHANNEL]));
+    //Serial.print(" CHANNEL " +  String(iregs[ADD_SELECTED_EXPANSION_CHANNEL]));
     iregs[ADD_SELECTED_EXPANSION_CHANNEL_CONFIG] = ctrl->getRxBuffer()[Ans_GET_CH_CONFIG_ConfigPos];
-    Serial.println(" CONFIG " +  String(iregs[ADD_SELECTED_EXPANSION_CHANNEL_CONFIG]));
+    //Serial.println(" CONFIG " +  String(iregs[ADD_SELECTED_EXPANSION_CHANNEL_CONFIG]));
 
     return true;
   }
@@ -712,12 +718,14 @@ static void sendR4DisplayInfo2R4Display(uint8_t index, R4DisplayExpansion &r4) {
 static void manageUserChangeValue(R4DisplayExpansion &r4) {
   ChangeChValue chg;
   if(r4.getUpdateChValue(chg)) {
-    Serial.println("C");
+    
     if(chg.exp_type == EXPANSION_OPTA_ANALOG) {
       AnalogExpansion ae = OptaController.getExpansion(chg.exp_index);
       if(ae) {
+        
         /* VOLTAGE DAC */
         if(ae.isChVoltageDac(chg.exp_channel)) {
+          
           ae.pinVoltage(chg.exp_channel,chg.value);
         }
         /* CURRENT DAC */
@@ -729,12 +737,10 @@ static void manageUserChangeValue(R4DisplayExpansion &r4) {
     else if(chg.exp_type == EXPANSION_DIGITAL_INVALID || 
             chg.exp_type == EXPANSION_OPTA_DIGITAL_MEC ||
             chg.exp_type == EXPANSION_OPTA_DIGITAL_STS) {
-      Serial.println("B");
+      
       DigitalExpansion de = OptaController.getExpansion(chg.exp_index);
       if(de) {
-        Serial.println("A");
-        Serial.println("channel " + String(chg.exp_channel));
-        Serial.println("value " + String((PinStatus)chg.value));
+        
         de.digitalWrite(chg.exp_channel, (PinStatus)chg.value,true);
       }
     }
@@ -796,8 +802,6 @@ void R4DisplayExpansion::updateDisplay() {
       sendAnalogExpansionInfo2R4Display(selected_expansion,r4);
       sendDigitalExpansionInfo2R4Display(selected_expansion,r4);
       sendR4DisplayInfo2R4Display(selected_expansion,r4);
-      
-      delay(2000); 
     }
   }  
 
@@ -811,9 +815,6 @@ void R4DisplayExpansion::updateExpansions() {
       manageUserChangeValue(r4);
       /* get if user want to change a channel value */
       manageUserChangeConfig(r4);
-
-      
-      delay(2000);
        
     }
   }  

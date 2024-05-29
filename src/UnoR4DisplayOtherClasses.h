@@ -237,6 +237,7 @@ public:
       d.print("R4 Displ");
    }
    void display(Adafruit_SSD1306 &d,uint8_t i) override {
+      Serial.println("R4");
       d.print("R4 Displ ");
       d.print(i);
    }
@@ -581,6 +582,7 @@ public:
 
 class Channel {
 private:
+   bool is_updated;
    bool is_pwm;
    bool is_configurable;
    chFun_t funcs[MAX_FUNCTIONS_PER_CHANNEL];
@@ -596,7 +598,7 @@ private:
      }
    }
 public:
-   Channel() : is_pwm(false), is_configurable(false) {
+   Channel() : is_pwm(false), is_configurable(false), is_updated(false) {
       for(int i = 0; i < MAX_FUNCTIONS_PER_CHANNEL;i++) {
         functions[i] = nullptr;
       }
@@ -610,6 +612,8 @@ public:
    bool isConfigurable() {return is_configurable; }
    void setConfigurable(bool r) {is_configurable = r;}
    bool isPwm() {return is_pwm;}
+   bool isUpdated() {return is_updated;}
+   void setIsUpdated(bool v) { is_updated = v; }
 
    
 
