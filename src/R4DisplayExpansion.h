@@ -108,10 +108,9 @@ protected:
   void send_analog_info_2_r4(uint8_t index);
   void send_r4_info_2_r4(uint8_t index);
   
-  unsigned int i2c_transaction(uint8_t (R4DisplayExpansion::*prepare)(),
-                               bool (R4DisplayExpansion::*parse)(),
-                               int rx_bytes);
-                               
+
+  
+                              
   uint8_t msg_get_selected_expansion();
   bool parse_ans_get_selected_expansion();
   bool parse_ack();

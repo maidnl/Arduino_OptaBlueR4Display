@@ -281,87 +281,57 @@ uint8_t R4DisplayExpansion::msg_set_channel_configuration() {
 
 /* __________________________________________________________________ EXECUTE */
 unsigned int R4DisplayExpansion::execute(uint32_t what) {
-  unsigned int rv = EXECUTE_OK;
+  i2c_rv = EXECUTE_OK;
   if (ctrl != nullptr) {
     
     switch (what) {
     /* ------------------------------------------------------------------- */
     case EXECUTE_GET_SELECTED_EXPANSION:
-      rv = i2c_transaction(&R4DisplayExpansion::msg_get_selected_expansion,
-                           &R4DisplayExpansion::parse_ans_get_selected_expansion,
-                           getExpectedAnsLen(GET_EXP_AnsLen));
+      I2C_TRANSACTION(msg_get_selected_expansion,
+                      parse_ans_get_selected_expansion,
+                      getExpectedAnsLen(GET_EXP_AnsLen));
       break;
     /* ------------------------------------------------------------------- */
     case EXECUTE_SET_NUM_OF_EXPANSION:
-      rv = i2c_transaction(&R4DisplayExpansion::msg_set_num_of_expansions,
-                           &R4DisplayExpansion::parse_ack,
-                           getExpectedAnsLen(ACK_Len));
+      I2C_TRANSACTION(msg_set_num_of_expansions,
+                      parse_ack,
+                      getExpectedAnsLen(ACK_Len));
       break;
     /* ------------------------------------------------------------------- */
     case EXECUTE_SET_EXPANSION_FEATURES:
-      rv = i2c_transaction(&R4DisplayExpansion::msg_set_expansion_features,
-                           &R4DisplayExpansion::parse_ack,
-                           getExpectedAnsLen(ACK_Len));
+      I2C_TRANSACTION(msg_set_expansion_features,
+                      parse_ack,
+                      getExpectedAnsLen(ACK_Len));
       break;
     /* ------------------------------------------------------------------- */
     case EXECUTE_SET_CHANNEL_CONFIGURATION:
-      rv = i2c_transaction(&R4DisplayExpansion::msg_set_channel_configuration,
-                           &R4DisplayExpansion::parse_ack,
-                           getExpectedAnsLen(ACK_Len));
+      I2C_TRANSACTION(msg_set_channel_configuration,
+                      parse_ack,
+                      getExpectedAnsLen(ACK_Len));
       break;
     /* ------------------------------------------------------------------- */
     case EXECUTE_GET_CH_VALUE:
-      rv = i2c_transaction(&R4DisplayExpansion::msg_get_ch_change_value,
-                           &R4DisplayExpansion::parse_get_ch_change_value,
-                           getExpectedAnsLen(GET_CH_VALUE_AnsLen));
+      I2C_TRANSACTION(msg_get_ch_change_value,
+                      parse_get_ch_change_value,
+                      getExpectedAnsLen(GET_CH_VALUE_AnsLen));
       break;  
     /* ------------------------------------------------------------------- */
     case EXECUTE_GET_CH_CONFIG:
-      rv = i2c_transaction(&R4DisplayExpansion::msg_get_ch_change_config,
-                           &R4DisplayExpansion::parse_get_ch_change_config,
-                           getExpectedAnsLen(GET_CH_CONFIG_AnsLen));
+      I2C_TRANSACTION(msg_get_ch_change_config,
+                      parse_get_ch_change_config,
+                      getExpectedAnsLen(GET_CH_CONFIG_AnsLen));
       break;    
     /* ------------------------------------------------------------------- */  
     default:
-      rv = Expansion::execute(what);
+      i2c_rv = Expansion::execute(what);
       break;
     }
     /* IMPORTANT: call this if you want to keep your expansion copies in sync */
     ctrl->updateRegs(*this);
   } else {
-    rv = EXECUTE_ERR_NO_CONTROLLER;
+    i2c_rv = EXECUTE_ERR_NO_CONTROLLER;
   }
-  return rv;
-}
-
-
-/* __________________________________________________________ I2C TRANSACTION */
-unsigned int
-R4DisplayExpansion::i2c_transaction(uint8_t (R4DisplayExpansion::*prepare)(),
-                                    bool (R4DisplayExpansion::*parse)(),
-                                    int rx_bytes) {
-  
-
-
-  if (prepare != nullptr) {
-    uint8_t err =
-        ctrl->send(i2c_address, index, type, (this->*prepare)(), rx_bytes);
-    if (err == SEND_RESULT_OK) {
-      if (parse != nullptr) {
-        if (!(this->*parse)()) {
-          return EXECUTE_ERR_PROTOCOL;
-        }
-        return EXECUTE_OK;
-      }
-    } else if (err == SEND_RESULT_COMM_TIMEOUT) {
-      if (com_timeout != nullptr) {
-        com_timeout(index, ctrl->getLastTxArgument());
-      }
-    }
-
-    return EXECUTE_ERR_I2C_COMM;
-  }
-  return EXECUTE_ERR_SINTAX;
+  return i2c_rv;
 }
 
 } // namespace Opta
