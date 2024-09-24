@@ -23,7 +23,7 @@
 void setup() {
 /* -------------------------------------------------------------------------- */    
   Serial.begin(115200);
-  delay(5000);
+  while(!Serial) {}
   Serial.println("UNO R4 Display");
 
   OptaExpansion = new OptaUnoR4Display();

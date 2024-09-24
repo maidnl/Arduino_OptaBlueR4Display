@@ -13,6 +13,8 @@
 
 #include "OptaUnoR4Display.h"
 
+//#define  USE_LCD_DISPLAY
+
 /* clause to avoid compilation of this file when the Opta Controller sketch
  * is compiled */
 
@@ -59,6 +61,7 @@ void OptaUnoR4Display::begin() {
   /* ! ALWAYS call base method !*/
   Module::begin();
 
+#ifdef USE_LCD_DISPLAY
   /* then initialize your hardware */
 
   /* Wire to talk with small LCD display*/
@@ -80,6 +83,7 @@ void OptaUnoR4Display::begin() {
    
   display.clearDisplay();
   display.display();
+#endif  
 }
 
 #ifdef DEBUG_BUTTONS
@@ -89,6 +93,8 @@ void debugButtonEvent(BtnEvent_t ev);
 
 /*_________________________________________________________override: update() */
 void OptaUnoR4Display::update() {
+  
+
   /* Always call base methods */
   Module::update();
   
