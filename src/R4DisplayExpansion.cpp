@@ -67,10 +67,9 @@ R4DisplayExpansion::R4DisplayExpansion(Expansion &other) {
 uint8_t R4DisplayExpansion::msg_get_selected_expansion() {
   if (ctrl == nullptr) return 0;
   
-  uint8_t rv =  prepareGetMsg(ctrl->getTxBuffer(),
+  uint8_t rv = prepareGetMsg(ctrl->getTxBuffer(),
                        Req_GET_EXP,
-                       Len_GET_EXP, 
-                       GET_EXP_Len);
+                       Len_GET_EXP);
   
   return rv;
 
@@ -79,11 +78,10 @@ uint8_t R4DisplayExpansion::msg_get_selected_expansion() {
 uint8_t R4DisplayExpansion::msg_get_ch_change_value() {
   if (ctrl == nullptr) return 0;
   
-  uint8_t rv =  prepareGetMsg(ctrl->getTxBuffer(),
+  uint8_t rv = prepareGetMsg(ctrl->getTxBuffer(),
                               Cmd_GET_CH_VALUE,
-                              Len_GET_CH_VALUE, 
-                              GET_CH_VALUE_Len);
-
+                              Len_GET_CH_VALUE);
+  return rv;
 }
 
 /* ________________________________________________PARSE: get change ch value */  
@@ -91,8 +89,7 @@ bool R4DisplayExpansion::parse_get_ch_change_value() {
   //Serial.print("PARSE parse_get_ch_change_value: ");
   if(checkAnsGetReceived(ctrl->getRxBuffer(), 
                          Ans_GET_CH_VALUE,
-                         AnsLen_GET_CH_VALUE, 
-                         Ans_GET_CH_VALUE_Len)) {
+                         AnsLen_GET_CH_VALUE)) {
 
     /* This message (answer fo the get changed channel value contains the 
        following information: */  
@@ -126,9 +123,8 @@ uint8_t R4DisplayExpansion::msg_get_ch_change_config(){
   
   uint8_t rv =  prepareGetMsg(ctrl->getTxBuffer(),
                               Cmd_GET_CH_CONFIG,
-                              Len_GET_CH_CONFIG, 
-                              GET_CH_CONFIG_Len);
-
+                              Len_GET_CH_CONFIG);
+  return rv;
 }
 
 /* _______________________________________________PARSE: get change ch config */
@@ -143,8 +139,7 @@ bool R4DisplayExpansion::parse_get_ch_change_config() {
   
   if(checkAnsGetReceived(ctrl->getRxBuffer(), 
                          Ans_GET_CH_CONFIG,
-                         AnsLen_GET_CH_CONFIG, 
-                         Ans_GET_CH_CONFIG_Len)) {
+                         AnsLen_GET_CH_CONFIG)) {
     
     //Serial.print("RICEVUTO ");
     iregs[ADD_SELECTED_EXPANSION_INDEX] = ctrl->getRxBuffer()[Ans_GET_CH_CONFIG_IndexPos];
@@ -169,7 +164,7 @@ bool R4DisplayExpansion::parse_ans_get_selected_expansion() {
   if (ctrl == nullptr) return false;
   /*
   Serial.print("PARSE get selected expansion: ");
-  for(int i = 0; i < getExpectedAnsLen(Ans_GET_EXP_Len); i++) {  
+  for(int i = 0; i < getExpectedAnsLen(AnsLen_GET_EXP); i++) {  
     Serial.print(ctrl->getRxBuffer()[i], HEX);
     Serial.print(" ");
   }
@@ -177,8 +172,7 @@ bool R4DisplayExpansion::parse_ans_get_selected_expansion() {
   */
   if(checkAnsGetReceived(ctrl->getRxBuffer(), 
                          Ans_GET_EXP,
-                         AnsLen_GET_EXP, 
-                         Ans_GET_EXP_Len)) {
+                         AnsLen_GET_EXP)) {
     iregs[ADD_SELECTED_EXPANSION] = ctrl->getRxBuffer()[Ans_GET_EXP_ExpPos];
     return true;
   }
@@ -192,8 +186,7 @@ bool R4DisplayExpansion::parse_ack() {
 
   return checkAnsSetReceived(ctrl->getRxBuffer(), 
                              ACK_ARG,
-                             Len_ACK, 
-                             ACK_Len);
+                             Len_ACK);
 
 }
 
@@ -204,8 +197,7 @@ uint8_t R4DisplayExpansion::msg_set_num_of_expansions() {
   ctrl->getTxBuffer()[EXP_NUM_NumPos] = iregs[ADD_NUM_OF_EXPANSIONS];
   uint8_t rv = prepareSetMsg(ctrl->getTxBuffer(), 
                        Cmd_EXP_NUM,
-                       Len_EXP_NUM, 
-                       EXP_NUM_Len);
+                       Len_EXP_NUM);
   /*
   Serial.print("set num of expansion: ");
   for(int i = 0; i < getExpectedAnsLen(EXP_NUM_Len); i++) {  
@@ -226,16 +218,7 @@ uint8_t R4DisplayExpansion::msg_set_expansion_features() {
   ctrl->getTxBuffer()[EXP_FEATURES_ChNumPos] = iregs[ADD_EXPANSION_NUM_OF_CHANNELS];
   uint8_t rv = prepareSetMsg(ctrl->getTxBuffer(), 
                        Cmd_EXP_FEATURES,
-                       Len_EXP_FEATURES, 
-                       EXP_FEATURES_Len);
-  /*
-  Serial.print("set expansion features: ");
-  for(int i = 0; i < getExpectedAnsLen(EXP_FEATURES_Len); i++) {  
-    Serial.print(ctrl->getTxBuffer()[i], HEX);
-    Serial.print(" ");
-  }
-  Serial.println();
-  */
+                       Len_EXP_FEATURES);
   return rv;
 
 }
@@ -265,16 +248,8 @@ uint8_t R4DisplayExpansion::msg_set_channel_configuration() {
   ctrl->getTxBuffer()[CH_CFG_U2Pos] = iregs[ADD_CHANNEL_U2];
   uint8_t rv = prepareSetMsg(ctrl->getTxBuffer(), 
                        Cmd_CH_CFG,
-                       Len_CH_CFG, 
-                       CH_CFG_Len);
-  /*
-  Serial.print("set channel cfg: ");
-  for(int i = 0; i < getExpectedAnsLen(CH_CFG_Len); i++) {  
-    Serial.print(ctrl->getTxBuffer()[i], HEX);
-    Serial.print(" ");
-  }
-  Serial.println();
-  */
+                       Len_CH_CFG);
+  return rv;
 }
 
 
@@ -289,37 +264,37 @@ unsigned int R4DisplayExpansion::execute(uint32_t what) {
     case EXECUTE_GET_SELECTED_EXPANSION:
       I2C_TRANSACTION(msg_get_selected_expansion,
                       parse_ans_get_selected_expansion,
-                      getExpectedAnsLen(GET_EXP_AnsLen));
+                      getExpectedAnsLen(AnsLen_GET_EXP));
       break;
     /* ------------------------------------------------------------------- */
     case EXECUTE_SET_NUM_OF_EXPANSION:
       I2C_TRANSACTION(msg_set_num_of_expansions,
                       parse_ack,
-                      getExpectedAnsLen(ACK_Len));
+                      getExpectedAnsLen(Len_ACK));
       break;
     /* ------------------------------------------------------------------- */
     case EXECUTE_SET_EXPANSION_FEATURES:
       I2C_TRANSACTION(msg_set_expansion_features,
                       parse_ack,
-                      getExpectedAnsLen(ACK_Len));
+                      getExpectedAnsLen(Len_ACK));
       break;
     /* ------------------------------------------------------------------- */
     case EXECUTE_SET_CHANNEL_CONFIGURATION:
       I2C_TRANSACTION(msg_set_channel_configuration,
                       parse_ack,
-                      getExpectedAnsLen(ACK_Len));
+                      getExpectedAnsLen(Len_ACK));
       break;
     /* ------------------------------------------------------------------- */
     case EXECUTE_GET_CH_VALUE:
       I2C_TRANSACTION(msg_get_ch_change_value,
                       parse_get_ch_change_value,
-                      getExpectedAnsLen(GET_CH_VALUE_AnsLen));
+                      getExpectedAnsLen(AnsLen_GET_CH_VALUE));
       break;  
     /* ------------------------------------------------------------------- */
     case EXECUTE_GET_CH_CONFIG:
       I2C_TRANSACTION(msg_get_ch_change_config,
                       parse_get_ch_change_config,
-                      getExpectedAnsLen(GET_CH_CONFIG_AnsLen));
+                      getExpectedAnsLen(AnsLen_GET_CH_CONFIG));
       break;    
     /* ------------------------------------------------------------------- */  
     default:
@@ -344,7 +319,7 @@ unsigned int R4DisplayExpansion::execute(uint32_t what) {
 
 /*_____________________________________________________GET SELECTED EXPANSION */
 uint8_t R4DisplayExpansion::getSelectedExpansion(){
-  uint8_t err = execute(EXECUTE_GET_SELECTED_EXPANSION);
+  /*uint8_t err =*/ execute(EXECUTE_GET_SELECTED_EXPANSION);
   //Serial.println("Execute get seletecte expansion err = " + String(err));
   unsigned int rv = 0;
   read(ADD_SELECTED_EXPANSION,rv);
@@ -355,7 +330,7 @@ uint8_t R4DisplayExpansion::getSelectedExpansion(){
 /*_____________________________________________SET NUM OF AVAILABLE EXPANSINS */
 void R4DisplayExpansion::setNumOfExpansions(uint8_t n){
   write(ADD_NUM_OF_EXPANSIONS,(unsigned int)n);
-  uint8_t err = execute(EXECUTE_SET_NUM_OF_EXPANSION);
+  /*uint8_t err = */ execute(EXECUTE_SET_NUM_OF_EXPANSION);
   //Serial.println("Execute num of expansion err = " + String(err));
 
 }
@@ -367,7 +342,7 @@ void R4DisplayExpansion::setExpansionFeatures(uint8_t type,
   write(ADD_EXPANSION_TYPE,(unsigned int)type);
   write(ADD_SELECTED_EXPANSION,(unsigned int)index);
   write(ADD_EXPANSION_NUM_OF_CHANNELS,(unsigned int)n_channels);
-  uint8_t err = execute(EXECUTE_SET_EXPANSION_FEATURES);
+  /*uint8_t err =*/ execute(EXECUTE_SET_EXPANSION_FEATURES);
   //Serial.println("Execute set expansion setExpansionFeatures err = " + String(err));
 
 }
@@ -391,7 +366,7 @@ void R4DisplayExpansion::setChannelConfiguration(uint8_t ch,
   write(ADD_SELECTED_CH_TYPE2,(unsigned int)t2);
   write(ADD_CHANNEL_V2,v2);
   write(ADD_CHANNEL_U2,(unsigned int)u2);
-  uint8_t err = execute(EXECUTE_SET_CHANNEL_CONFIGURATION);
+  /*uint8_t err = */execute(EXECUTE_SET_CHANNEL_CONFIGURATION);
   //Serial.println("Execute set channel configuration err = " + String(err));
 
 }

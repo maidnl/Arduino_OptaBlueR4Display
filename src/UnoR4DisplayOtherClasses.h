@@ -582,9 +582,9 @@ public:
 
 class Channel {
 private:
-   bool is_updated;
    bool is_pwm;
    bool is_configurable;
+   bool is_updated;
    chFun_t funcs[MAX_FUNCTIONS_PER_CHANNEL];
    chType_t types[MAX_FUNCTIONS_PER_CHANNEL];
    ChFunction  *functions[MAX_FUNCTIONS_PER_CHANNEL];

@@ -374,8 +374,7 @@ BtnEvent_t OptaUnoR4Display::button_pressed() {
 bool OptaUnoR4Display::parse_get_selected_expansion() {
   return checkGetMsgReceived(rx_buffer, 
                              Req_GET_EXP,
-                             Len_GET_EXP, 
-                             GET_EXP_Len);
+                             Len_GET_EXP);
 }
 
 /* _______________________________________PREPARE ANS: get selected expansion */
@@ -383,16 +382,14 @@ uint8_t OptaUnoR4Display::msg_ans_selected_expansion() {
   tx_buffer[Ans_GET_EXP_ExpPos] = i2c_exp_selected_transmitted;
   return prepareGetAns(tx_buffer, 
                        Ans_GET_EXP,
-                       AnsLen_GET_EXP, 
-                       Ans_GET_EXP_Len);
+                       AnsLen_GET_EXP);
 }
 
 /* ________________________________________________PARSE: get change ch value */
 bool OptaUnoR4Display::parse_get_ch_change_value() {
   return checkGetMsgReceived(rx_buffer, 
                              Cmd_GET_CH_VALUE,
-                             Len_GET_CH_VALUE, 
-                             GET_CH_VALUE_Len);
+                             Len_GET_CH_VALUE);
 
 }
 
@@ -410,8 +407,7 @@ uint8_t OptaUnoR4Display::msg_get_ch_change_value(){
   i2c_change_expansion_index = 255;
   return prepareGetAns(tx_buffer, 
                        Ans_GET_CH_VALUE,
-                       AnsLen_GET_CH_VALUE, 
-                       Ans_GET_CH_VALUE_Len);
+                       AnsLen_GET_CH_VALUE);
 
 }
 
@@ -420,8 +416,7 @@ bool OptaUnoR4Display::parse_get_ch_change_config(){
   
   return checkGetMsgReceived(rx_buffer, 
                              Cmd_GET_CH_CONFIG,
-                             Len_GET_CH_CONFIG, 
-                             GET_CH_CONFIG_Len);
+                             Len_GET_CH_CONFIG);
 
 }
 
@@ -434,8 +429,7 @@ uint8_t OptaUnoR4Display::msg_get_ch_change_config(){
   i2c_change_expansion_index_config = 255;
   return prepareGetAns(tx_buffer, 
                        Ans_GET_CH_CONFIG,
-                       AnsLen_GET_CH_CONFIG, 
-                       Ans_GET_CH_CONFIG_Len);
+                       AnsLen_GET_CH_CONFIG);
 
 }
 
@@ -443,16 +437,14 @@ uint8_t OptaUnoR4Display::msg_get_ch_change_config(){
 uint8_t OptaUnoR4Display::msg_ack() {
   return prepareSetAns(tx_buffer, 
                        ACK_ARG,
-                       Len_ACK, 
-                       ACK_Len);
+                       Len_ACK);
 }
   
 /* _____________________________________________PARSE: Set Expansion Features */
 bool OptaUnoR4Display::parse_set_expansion_features() {
   if(checkSetMsgReceived(rx_buffer, 
                          Cmd_EXP_FEATURES,
-                         Len_EXP_FEATURES, 
-                         EXP_FEATURES_Len)) {
+                         Len_EXP_FEATURES)) {
     
     i2c_exp_selected_received = rx_buffer[EXP_FEATURES_IndexPos];
     i2c_exp_type = rx_buffer[EXP_FEATURES_TypePos];
@@ -467,8 +459,7 @@ bool OptaUnoR4Display::parse_set_expansion_features() {
 bool OptaUnoR4Display::parse_set_num_of_expansion() {
   if(checkSetMsgReceived(rx_buffer, 
                          Cmd_EXP_NUM,
-                         Len_EXP_NUM, 
-                         EXP_NUM_Len)) {
+                         Len_EXP_NUM)) {
 
     i2c_num_of_exp = rx_buffer[EXP_NUM_NumPos];
     return true;
@@ -481,8 +472,7 @@ bool OptaUnoR4Display::parse_set_num_of_expansion() {
 bool OptaUnoR4Display::parse_set_ch_configuration() {
   if(checkSetMsgReceived(rx_buffer, 
                        Cmd_CH_CFG,
-                       Len_CH_CFG, 
-                       CH_CFG_Len)) {
+                       Len_CH_CFG)) {
     
     Float_u v;
     uint8_t ch = rx_buffer[CH_CFG_ChPos];
